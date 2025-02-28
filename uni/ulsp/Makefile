@@ -22,12 +22,11 @@ $(prog): $(OBJ)
 jsonrpc-test: jsonrpc-test.u jsonrpc.u
 	$(UC) -o jsonrpc-test jsonrpc-test.u jsonrpc.u
 
-launch-lsp.u:launch-lsp.icn filespace.u database.u server.u completion.u signature.u hover.u definition.u
+launch-lsp.u: launch-lsp.icn filespace.u database.u server.u completion.u signature.u hover.u definition.u
 
-server.u:server.icn database.u completion.u filespace.u signature.u hover.u definition.u jsonrpc.u logger.u
-hover.u:hover.icn signature.u
+server.u: server.icn database.u completion.u filespace.u signature.u hover.u definition.u jsonrpc.u logger.u
+hover.u: hover.icn signature.u
 definition.u: definition.icn hover.u
-lsif.u: lsif.icn
 
 zip:
 	zip ulsp.zip Makefile *.icn

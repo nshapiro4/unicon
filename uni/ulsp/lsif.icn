@@ -6,28 +6,7 @@ link ximage
 global projectID, documentID, resultSetID, rangeID, range_list, document_list, referenceID
 
 #  Generates LSIF information by going through the packages in the database and create LSIF vertices and edges
-#  from each project, file, hover info, etc. 
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#
-#        
-#        
-#
-#
-
+#  from each project, file, hover info, etc.
 class LSIFIndexer(
       db,                         # The provided database to index
       nextID,                     # The ID for the vertices/edges
@@ -35,11 +14,11 @@ class LSIFIndexer(
       )
 
    #  The main method of the LSIFIndexer class; this method will take the assigned database (db) and
-   #  use it to build an index file of all relevant information in each of the files and output it 
-   #  to a directed file in LSIF JSON format. 
-   method build_index() 
-      local i, j, k, idoc, path, x, pack, file_in_pack, uri, filespace_object, fake_params, result, hoverHandler, 
-            context, char_end, line_end, definitionHandler, result2, resultSet_table, resultSet, reference, 
+   #  use it to build an index file of all relevant information in each of the files and output it
+   #  to a directed file in LSIF JSON format.
+   method build_index()
+      local i, j, k, idoc, path, x, pack, file_in_pack, uri, filespace_object, fake_params, result, hoverHandler,
+            context, char_end, line_end, definitionHandler, result2, resultSet_table, resultSet, reference,
             reference_table, c, b := 0, test := 0
       hoverHandler := HoverHandler()
       definitionHandler := DefinitionHandler()
@@ -50,7 +29,7 @@ class LSIFIndexer(
       createMetaDataVertex(db.unicon_dir)
       every i := 1 to *db.dir_list do {
          path := db.dir_list[i]
-         
+
          idoc := UniAll()
 
          idoc.setSourcePath(path)
@@ -59,7 +38,7 @@ class LSIFIndexer(
          x := idoc.packages
          path := replace(path, "C:", "c:")
          path ? {
-            &pos := 0 
+            &pos := 0
             while c := move(-1) do {
                if c == "/" | c == "\\" then b +:= 1
                if b == 2 then break
@@ -90,7 +69,7 @@ class LSIFIndexer(
                   context := filespace_object.getContext(j+1, 1)
                   char_end := *context.line
                   while k < char_end do {
-                     fake_params["position"]["character"] := k                     
+                     fake_params["position"]["character"] := k
                      hoverHandler.setVariables(filespace_object, fake_params)
                      definitionHandler.setVariables(filespace_object, fake_params)
                      result := hoverHandler.run("lsif")
@@ -98,7 +77,7 @@ class LSIFIndexer(
                         createRangeVertex(result["line"], result["begins"], result["ends"])
                         result2 := definitionHandler.run()
                         if \result2 & tojson(result2) ~== "{}" & result2["uri"] == uri then {
-                           if (j >= result2["range"]["start"]["line"] && j <= result2["range"]["end"]["line"] && 
+                           if (j >= result2["range"]["start"]["line"] && j <= result2["range"]["end"]["line"] &&
                                k >= result2["range"]["start"]["character"] && k <= result2["range"]["end"]["character"]) then {
                               createResultSetVertex()
                               createHoverResultVertex(result["item"], nextID-1)
@@ -109,7 +88,7 @@ class LSIFIndexer(
                               result2["docID"] := documentID
                               result2["referenceID"] := referenceID
                               resultSet_table[resultSetID] := result2
-                           } else { 
+                           } else {
                               result2["rangeID"] := rangeID
                               result2["result"] := result
                               result2["docID"] := documentID
@@ -123,7 +102,7 @@ class LSIFIndexer(
                         } else {
                            createHoverResultVertex(result["item"], rangeID)
                         }
-                        k := result["ends"] 
+                        k := result["ends"]
                      }
                      k := k + 1
                   }
@@ -139,9 +118,9 @@ class LSIFIndexer(
             every resultSet := !resultSet_table do {
                every reference := !reference_table do {
                   if (resultSet["uri"] == reference["uri"] &&
-                     resultSet["range"]["start"]["line"] == reference["range"]["start"]["line"] && 
-                     resultSet["range"]["end"]["line"] == reference["range"]["end"]["line"] && 
-                     resultSet["range"]["start"]["character"] == reference["range"]["start"]["character"] && 
+                     resultSet["range"]["start"]["line"] == reference["range"]["start"]["line"] &&
+                     resultSet["range"]["end"]["line"] == reference["range"]["end"]["line"] &&
+                     resultSet["range"]["start"]["character"] == reference["range"]["start"]["character"] &&
                      resultSet["range"]["end"]["character"] == reference["range"]["end"]["character"]) then {
                      createHoverResultVertex(reference["result"]["item"], reference["rangeID"])
                      createItemEdge(resultSet["referenceID"], reference["rangeID"], reference["docID"], "references")
@@ -161,7 +140,7 @@ class LSIFIndexer(
       }
       close(outFile)
    end
-   
+
    #  Iterates nextID up one.
    #  <i>This is intended for internal use only!</i>
    method getNextID()
@@ -224,7 +203,7 @@ class LSIFIndexer(
    end
 
    #  Creates a Document vertex and the associated contains edge that links it to
-   #  the project that it is a part of. 
+   #  the project that it is a part of.
    #  Params: uri - The uri of the file of the document vertex.
    #  <i>This is intended for internal use only!</i>
    method createDocumentVertex(uri)
@@ -255,7 +234,7 @@ class LSIFIndexer(
       write(outFile, tojson(lsif_table))
       nextID := getNextID()
    end
-   
+
    #  Creates a range vertex with the relevant data.
    #  Params: lineNum - The line number that the token is located on.
    #          startCharNum - The starting character position.
@@ -278,12 +257,12 @@ class LSIFIndexer(
 
    #  Creates a hoverResult vertex, along with a range vertex and a textdocument/hover edge.
    #  Params: value - The value of the token that is being hovered over.
-   #          outID - For regular hover results, it will be the rangeID. For hover results linked to a resultSet, 
+   #          outID - For regular hover results, it will be the rangeID. For hover results linked to a resultSet,
    #                  it will be the resultSetID.
    #  <i>This is intended for internal use only!</i>
-   method createHoverResultVertex(value, outID) 
+   method createHoverResultVertex(value, outID)
       local lsif_table
-      
+
       lsif_table := table()
       lsif_table["id"] := nextID
       lsif_table["type"] := "vertex"
@@ -316,7 +295,7 @@ class LSIFIndexer(
       nextID := getNextID()
    end
 
-   #  Creates a definitionResult vertex and a textDocument/definition edge that links a given range 
+   #  Creates a definitionResult vertex and a textDocument/definition edge that links a given range
    #  vertex to a resultSet vertex.
    #  <i>This is intended for internal use only!</i>
    method createDefinitionResultVertex()
@@ -339,7 +318,7 @@ class LSIFIndexer(
       createItemEdge(nextID-2, rangeID, documentID)
    end
 
-   #  Creates a referenceResult vertex and a textDocument/references edge that links a given range 
+   #  Creates a referenceResult vertex and a textDocument/references edge that links a given range
    #  vertex to a resultSet vertex.
    #  <i>This is intended for internal use only!</i>
    method createReferenceResultVertex(outID, property)
@@ -403,14 +382,14 @@ class LSIFIndexer(
       write(outFile, tojson(lsif_table))
       nextID := getNextID()
    end
-   
-   #  Initially set this class' database to db and nextID to 1. This will also clear out the 
+
+   #  Initially set this class' database to db and nextID to 1. This will also clear out the
    #  output.lsif file and open it in append mode to be worked on by the Indexer.
    initially(db)
       self.db := db
       self.nextID := 1
       self.outFile := open(db.unicon_dir || "uni/ulsp/output.lsif", "w") | stop("Unable to open file")
-      close(self.outFile) 
+      close(self.outFile)
       self.outFile := open(db.unicon_dir || "uni/ulsp/output.lsif", "a") | stop("Unable to open file")
-      
+
 end

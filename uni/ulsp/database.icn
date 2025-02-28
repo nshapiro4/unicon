@@ -81,7 +81,7 @@ class LSPDB(
 
       idoc.setSourcePath(dirPath)
       idoc.processFile(dirPath)
-      fail
+
       source_file := idoc.getAllFiles()[1]
 
       every _procedure := source_file.getProcedures().get() do {

@@ -52,7 +52,7 @@ procedure ulsp_sig_handler(siganl)
 end
 
 procedure main(args)
-   local opts, sock, mode, lsp_database, indexer, lsif_responder
+   local opts, sock, mode, lsp_database, indexer
 
    trap("SIGINT", ulsp_sig_handler)
 
@@ -87,7 +87,6 @@ procedure main(args)
    # Set mode for server to run in, based on opts.
    member(opts, mode := "c") | (mode := "s")
 
-   #fail
    ulsp_server := Server(sock, mode)
    ulsp_server.run()
 
