@@ -1,0 +1,28 @@
+package ulsp
+
+import json
+link regexp
+link ximage
+
+class FoldingRangeHandler(
+   filespace,
+   params,
+   )
+
+   method setVariables(new_filespace, new_params)
+      filespace := new_filespace
+      params := new_params
+   end
+
+   method run()
+      local results_table
+      
+      return constructResult()
+   end
+
+   method constructResult()
+      local results_table := table()
+
+      return results_table
+   end
+end

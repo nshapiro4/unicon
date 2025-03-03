@@ -1,0 +1,164 @@
+package ulsp
+
+import json
+link regexp
+link ximage
+
+#           File = 1,
+#           Module = 2,
+#           Namespace = 3,
+#           Package = 4,
+#           Class = 5,
+#           Method = 6,
+#           Property = 7,
+#           Field = 8,
+#           Constructor = 9,
+#           Enum = 10,
+#           Interface = 11,
+#           Function = 12,
+#           Variable = 13,
+#           Constant = 14,
+#           String = 15,
+#           Number = 16,
+#           Boolean = 17,
+#           Array = 18,
+#           Object = 19,
+#           Key = 20,
+#           Null = 21,
+#           EnumMember = 22,
+#           Struct = 23,
+#           Event = 24,
+#           Operator = 25,
+#           TypeParameter = 26;
+#
+#     TODO:
+#           -Add ranges to filespace
+#           -Fix hierarchy for variables 
+#           -implement more textDocument request handling
+#           
+#     COMPLETED:
+#           -Added method in filespace for computing selectionRange of symbols
+#           -Added system to store symbol information to answer duplicate requests and only generate new
+#           info on saving
+#           -Added skeleton for foldingRange
+#
+#     PLAN:
+#           -Finish adding ranges to filespace
+#           -Implement foldingRange responses using the ranges from filespace
+#           -Add hierarchy for variables using the ranges from filespace
+#           -Add documentation to symbols.icn
+#           -Start either references or formatting responses
+#
+
+
+class SymbolHandler(
+   filespace,
+   params,
+   results_list
+   )
+
+   method setVariables(new_filespace, new_params)
+      filespace := new_filespace
+      params := new_params
+   end
+
+   method run()
+      local procedure_name, procedure_table, class_name, class_table, 
+            method_name, method_table, variable_name, class_symbol, method_symbol,
+            pos_table, rsl, rsc, rel, rec, ssl, ssc, sel, sec
+      results_list := []
+      pos_table := filespace.getInternalPositions()
+      
+      # Get procedures from filespace
+      every procedure_name := key(filespace.getInternalProcedures()) do {
+         procedure_table := filespace.getInternalProcedures()[procedure_name]
+
+         if member(pos_table, procedure_name) then {
+            rsl := ssl := pos_table[procedure_name]["start"][1] - 1
+            rsc := ssc := pos_table[procedure_name]["start"][2]
+            rel := sel := pos_table[procedure_name]["end"][1] - 1
+            rec := sec := pos_table[procedure_name]["end"][2]
+         } else {
+            rsl := rsc := rel := rec := ssl := ssc := sel := sec := 0
+         }
+
+         put(results_list, constructResult(procedure_name, 12, rsl, rsc, rel, rec, ssl, ssc, sel, sec, []))
+      }
+
+      # Get classes and their methods from filespace
+      every class_name := key(filespace.getInternalClasses()) do {
+         class_table := filespace.getInternalClasses()[class_name]
+         #Logger.info("TEST " || ximage(class_table))
+
+         if member(pos_table, class_name) then {
+            rsl := ssl := pos_table[class_name]["start"][1] - 1
+            rsc := ssc := pos_table[class_name]["start"][2]
+            rel := sel := pos_table[class_name]["end"][1] - 1
+            rec := sec := pos_table[class_name]["end"][2]
+         } else {
+            rsl := rsc := rel := rec := ssl := ssc := sel := sec := 0
+         }
+
+         class_symbol := constructResult(class_name, 5, rsl, rsc, rel, rec, ssl, ssc, sel, sec, [])
+
+         # Get methods inside classes from filespace
+         every method_name := key(class_table["methods"]) do {
+            method_table := class_table["methods"][method_name]
+            
+            if member(pos_table, method_name) then {
+               rsl := ssl := pos_table[method_name]["start"][1] - 1
+               rsc := ssc := pos_table[method_name]["start"][2]
+               rel := sel := pos_table[method_name]["end"][1] - 1
+               rec := sec := pos_table[method_name]["end"][2]
+            } else {
+               rsl := rsc := rel := rec := ssl := ssc := sel := sec := 0
+            }
+
+            method_symbol := constructResult(method_name, 6, rsl, rsc, rel, rec, ssl, ssc, sel, sec, [])
+            put(class_symbol["children"], method_symbol)
+         }
+
+         put(results_list, class_symbol)
+      }
+
+      # Get variables from filespace
+      every variable_name := key(filespace.getVariables()) do {
+         if member(pos_table, variable_name) then {
+            rsl := ssl := pos_table[variable_name]["start"][1] - 1
+            rsc := ssc := pos_table[variable_name]["start"][2]
+            rel := sel := pos_table[variable_name]["end"][1] - 1
+            rec := sec := pos_table[variable_name]["end"][2]
+         } else {
+            rsl := rsc := rel := rec := ssl := ssc := sel := sec := 0
+         }
+         put(results_list, constructResult(variable_name, 13, rsl, rsc, rel, rec, ssl, ssc, sel, sec, []))
+      }
+
+      #Logger.info("TEST: " || ximage(filespace.getInternalPositions()))
+      return results_list
+   end
+
+   method constructResult(nam, kin, rsl, rsc, rel, rec, ssl, ssc, sel, sec, chi)
+      local results_table := table()
+      results_table["range"] := table()
+      results_table["range"]["start"] := table()
+      results_table["range"]["end"] := table()
+      results_table["selectionRange"] := table()
+      results_table["selectionRange"]["start"] := table()
+      results_table["selectionRange"]["end"] := table()
+
+      results_table["name"] := nam
+      results_table["kind"] := kin
+      results_table["range"]["start"]["line"] := rsl
+      results_table["range"]["start"]["character"] := rsc
+      results_table["range"]["end"]["line"] := rel
+      results_table["range"]["end"]["character"] := rec
+      results_table["selectionRange"]["start"]["line"] := ssl
+      results_table["selectionRange"]["start"]["character"] := ssc
+      results_table["selectionRange"]["end"]["line"] := sel
+      results_table["selectionRange"]["end"]["character"] := sec
+      results_table["children"] := chi
+
+      return results_table
+   end
+end

@@ -50,7 +50,8 @@ class Filespace(
    package_classes,
    m_uni_file,
    temp_idoc,
-   context
+   context,
+   internal_positions
    )
 
    method updateFilespace()
@@ -67,6 +68,7 @@ class Filespace(
       setPackageClasses()
       setObjects()
       setVariables()
+      setInternalPositions()
    end
 
    method setFile()
@@ -588,6 +590,71 @@ class Filespace(
          context := Context(temp_idoc, uri, lineNum, charNum)
       }
       return context
+   end
+
+   method setInternalPositions()
+      local lineNum, _line, name, startPos, endPos, className, regexPattern, open_blocks
+
+      Logger.info("Running setInternalPositions()...")
+      internal_positions := table()
+      open_blocks := []
+
+      lineNum := 1
+      while _line := temp_idoc.getUniFileLine(uri, lineNum) do {
+         # Check for procedures
+         every name := key(internal_procedures) do {
+            if ReMatch("procedure\\s+" || name || "\\s*\\(", _line) then {
+               startPos := find(name, _line)
+               endPos := startPos + *name - 1
+               #Logger.info("Found procedure: ", name, " at line ", lineNum, " pos: ", startPos, "-", endPos)
+               internal_positions[name] := table("type", "procedure", "start", [lineNum, startPos], "end", [lineNum, endPos])
+            }
+         }
+   
+         # Check for classes
+         every name := key(internal_classes) do {
+            if ReMatch("class\\s+" || name || "\\s*\\(", _line) then {
+               startPos := find(name, _line)
+               endPos := startPos + *name - 1
+               #Logger.info("Found class: ", name, " at line ", lineNum, " pos: ", startPos, "-", endPos)
+               internal_positions[name] := table("type", "class", "start", [lineNum, startPos], "end", [lineNum, endPos])
+            }
+         }
+   
+         # Check for methods within classes
+         every className := key(internal_classes) do {
+            every name := key(internal_classes[className]["methods"]) do {
+               if ReMatch(".*method\\s+" || name || "\\s*\\(", _line) then {
+                  startPos := find(name, _line)
+                  endPos := startPos + *name - 1
+                  #Logger.info(("Found method: ", name, " in class ", className, " at line ", lineNum, " pos: ", startPos, "-", endPos))
+                  internal_positions[name] := table("type", "method", "start", [lineNum, startPos], "end", [lineNum, endPos])
+               }
+            }
+         }
+   
+         if ReMatch("^end\\s*$", _line) then {
+            if *open_blocks > 0 then {
+
+            }
+         }
+         # Check for variables
+         every name := key(variables) do {
+            if ReMatch(".*" || name || "\\s*\\:=", _line) then {
+               startPos := find(name, _line)
+               endPos := startPos + *name - 1
+               #Logger.info("Found variable: ", name, " at line ", lineNum, " pos: ", startPos, "-", endPos)
+               internal_positions[name] := table("type", "variable", "start", [lineNum, startPos], "end", [lineNum, endPos])
+            }
+         }
+   
+         lineNum +:= 1
+      }
+      #Logger.info("Final Internal Positions: " || ximage(internal_positions))
+   end
+
+   method getInternalPositions()
+      return internal_positions
    end
 
 # -------------------------------------------------------------------------------------------------
