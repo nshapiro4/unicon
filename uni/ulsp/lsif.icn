@@ -388,8 +388,5 @@ class LSIFIndexer(
    initially(db)
       self.db := db
       self.nextID := 1
-      self.outFile := open(db.unicon_dir || "uni/ulsp/output.lsif", "w") | stop("Unable to open file")
-      close(self.outFile)
-      self.outFile := open(db.unicon_dir || "uni/ulsp/output.lsif", "a") | stop("Unable to open file")
-
+      self.outFile := open(db.unicon_dir || "uni/ulsp/unicon.lsif", "w") | stop("Unable to open file")
 end

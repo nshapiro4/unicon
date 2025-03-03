@@ -1,0 +1,59 @@
+package ulsp
+
+import json
+link regexp
+link ximage
+
+class FoldingRangeHandler(
+   filespace,
+   params
+   )
+
+   method setVariables(new_filespace, new_params)
+      filespace := new_filespace
+      params := new_params
+   end
+
+   method run()
+      local results_table, tokenKind, tokenName, entry, startLine, endLine
+
+      results_table := []
+      
+      every tokenKind := key(filespace.internal_positions) do {
+         every tokenName := key(filespace.internal_positions[tokenKind]) do {
+            entry := filespace.internal_positions[tokenKind][tokenName]
+      
+            if member(entry, "range") then {
+               startLine := entry["range"]["start"][1]
+               endLine := entry["range"]["end"][1] - 1
+
+               # Ensure valid range for folding
+               if startLine < endLine then {
+                  put(results_table, table(
+                     "startLine", startLine,
+                     "endLine", endLine
+                  ))
+               }
+            }  
+         }
+      }
+      Logger.info("Folding range results: " || ximage(results_table))
+      return results_table
+   end
+
+   method findCommentBlocks()
+
+   end
+
+   method findImports()
+
+   end
+
+   method findInitially()
+
+   end
+   
+   method findLoopsAndConditionals()
+
+   end
+end
