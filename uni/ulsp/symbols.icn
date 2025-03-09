@@ -1,47 +1,18 @@
 package ulsp
 
-import json
-link regexp
 link ximage
 
-#           File = 1,
-#           Module = 2,
-#           Namespace = 3,
-#           Package = 4,
-#           Class = 5,
-#           Method = 6,
-#           Property = 7,
-#           Field = 8,
-#           Constructor = 9,
-#           Enum = 10,
-#           Interface = 11,
-#           Function = 12,
-#           Variable = 13,
-#           Constant = 14,
-#           String = 15,
-#           Number = 16,
-#           Boolean = 17,
-#           Array = 18,
-#           Object = 19,
-#           Key = 20,
-#           Null = 21,
-#           EnumMember = 22,
-#           Struct = 23,
-#           Event = 24,
-#           Operator = 25,
-#           TypeParameter = 26;
-#
 #     TODO:
-#           -Add ranges to filespace
+#           -Add ranges to file_handler
 #           -Fix hierarchy for variables 
 #           -implement more textDocument request handling
 #           -Functional tests in extension
 #           
 #     COMPLETED:
 #           -Resolved comments on PR
-#           -Finish adding ranges to filespace
-#           -Implement foldingRange responses using the ranges from filespace
-#           -Add hierarchy for variables using the ranges from filespace
+#           -Finish adding ranges to file_handler
+#           -Implement foldingRange responses using the ranges from file_handler
+#           -Add hierarchy for variables using the ranges from file_handler
 #
 #     PLAN:
 #           -Complete changes to PR
@@ -53,13 +24,13 @@ link ximage
 
 
 class SymbolHandler(
-   filespace,
+   file_handler,
    params,
    results_list
    )
 
-   method setVariables(new_filespace, new_params)
-      filespace := new_filespace
+   method setVariables(new_file_handler, new_params)
+      file_handler := new_file_handler
       params := new_params
    end
 
@@ -67,14 +38,14 @@ class SymbolHandler(
       local procedure_name, procedure_table, class_name, class_table, 
             method_name, method_table, variable_name, class_symbol, method_symbol,
             pos_table, rsl, rsc, rel, rec, ssl, ssc, sel, sec, entity_table,
-            proc_symbol, var_symbol
+            proc_symbol, var_symbol, initially_section
       results_list := []
-      pos_table := filespace.getInternalPositions()
+      pos_table := file_handler.getInternalPositions()
       entity_table := table()
       
-      # Get procedures from filespace
-      every procedure_name := key(filespace.getInternalProcedures()) do {
-         procedure_table := filespace.getInternalProcedures()[procedure_name]
+      # Get procedures from file_handler
+      every procedure_name := key(file_handler.getInternalProcedures()) do {
+         procedure_table := file_handler.getInternalProcedures()[procedure_name]
 
          if member(pos_table["procedures"], procedure_name) then {
             ssl := pos_table["procedures"][procedure_name]["selectionRange"]["start"][1]
@@ -94,9 +65,9 @@ class SymbolHandler(
          put(results_list, proc_symbol)
       }
 
-      # Get classes and their methods from filespace
-      every class_name := key(filespace.getInternalClasses()) do {
-         class_table := filespace.getInternalClasses()[class_name]
+      # Get classes and their methods from file_handler
+      every class_name := key(file_handler.getInternalClasses()) do {
+         class_table := file_handler.getInternalClasses()[class_name]
          #Logger.info("TEST " || ximage(class_table))
 
          if member(pos_table["classes"], class_name) then {
@@ -114,7 +85,7 @@ class SymbolHandler(
 
          class_symbol := constructResult(class_name, 5, rsl, rsc, rel, rec, ssl, ssc, sel, sec, [])
 
-         # Get methods inside classes from filespace
+         # Get methods inside classes from file_handler
          every method_name := key(class_table["methods"]) do {
             method_table := class_table["methods"][method_name]
             
@@ -135,12 +106,26 @@ class SymbolHandler(
             entity_table[method_name] := method_symbol
             put(class_symbol["children"], method_symbol)
          }
+         # Get initially sections inside classes from file_handler
+         if member(pos_table, "initially") && member(pos_table["initially"], class_name) then {
+            ssl := pos_table["initially"][class_name]["selectionRange"]["start"][1]
+            ssc := pos_table["initially"][class_name]["selectionRange"]["start"][2]
+            sel := pos_table["initially"][class_name]["selectionRange"]["end"][1]
+            sec := pos_table["initially"][class_name]["selectionRange"]["end"][2]
+            rsl := pos_table["initially"][class_name]["range"]["start"][1]
+            rsc := pos_table["initially"][class_name]["range"]["start"][2]
+            rel := pos_table["initially"][class_name]["range"]["end"][1]
+            rec := pos_table["initially"][class_name]["range"]["end"][2]
+            method_symbol := constructResult("initially", 9, rsl, rsc, rel, rec, ssl, ssc, sel, sec, [])
+            entity_table["initially" || class_name] := method_symbol
+            put(class_symbol["children"], method_symbol)
+         }
 
          put(results_list, class_symbol)
       }
 
-      # Get variables from filespace
-      every variable_name := key(filespace.getVariables()) do {
+      # Get variables from file_handler
+      every variable_name := key(file_handler.getVariables()) do {
          if member(pos_table["variables"], variable_name) then {
             rsl := ssl := pos_table["variables"][variable_name]["selectionRange"]["start"][1]
             rsc := ssc := pos_table["variables"][variable_name]["selectionRange"]["start"][2] 
@@ -158,8 +143,8 @@ class SymbolHandler(
             put(results_list, var_symbol)
          }
       }
-
-      #Logger.info("TEST: " || ximage(filespace.getInternalPositions()))
+      #write("entity_table: " || ximage(entity_table))
+      #Logger.info("TEST: " || ximage(results_list))
       return results_list
    end
 
@@ -171,6 +156,7 @@ class SymbolHandler(
          p_rel := parent["range"]["end"]["line"]
          p_rec := parent["range"]["end"]["character"]
 
+         #write(p_rsl || "<" || v_rsl || "&" || p_rel || ">" || v_rel || " : " || ximage(parent))
          if (p_rsl < v_rsl | (p_rsl == v_rsl & p_rsc <= v_rsc)) & 
             (p_rel > v_rel | (p_rel == v_rel & p_rec >= v_rec)) then {
             return parent

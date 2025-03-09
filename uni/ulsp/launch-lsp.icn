@@ -8,7 +8,6 @@
 #   -Instantiates Server class and calls run() to start server on validated port number.
 #
 import ulsp
-import json
 link options
 link basename
 link ximage
@@ -29,7 +28,7 @@ procedure usage()
    write("\t --logfile <filename> : log file")
    write("\t --loglevel <level> : log level from 0-17. log levels 8-17 are used for debugging")
    write("\t --debug-kind  <kind>: debug kind to log")
-   write("\t --build-lsif <directory> : directory to parse for LSIF information")
+   write("\t --build-lsif <directory> : directory to parse for LSIF information or \"all\" for all directories")
    write("\t -h : show this help\n")
    exit(-1)
 end
@@ -89,6 +88,4 @@ procedure main(args)
 
    ulsp_server := Server(sock, mode)
    ulsp_server.run()
-
 end
-

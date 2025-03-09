@@ -1,16 +1,14 @@
 package ulsp
 
-import json
-link regexp
 link ximage
 
 class FoldingRangeHandler(
-   filespace,
+   file_handler,
    params
    )
 
-   method setVariables(new_filespace, new_params)
-      filespace := new_filespace
+   method setVariables(new_file_handler, new_params)
+      file_handler := new_file_handler
       params := new_params
    end
 
@@ -19,14 +17,15 @@ class FoldingRangeHandler(
 
       results_table := []
       
-      every tokenKind := key(filespace.internal_positions) do {
-         every tokenName := key(filespace.internal_positions[tokenKind]) do {
-            entry := filespace.internal_positions[tokenKind][tokenName]
+      every tokenKind := key(file_handler.internal_positions) do {
+         every tokenName := key(file_handler.internal_positions[tokenKind]) do {
+            entry := file_handler.internal_positions[tokenKind][tokenName]
       
             if member(entry, "range") then {
                startLine := entry["range"]["start"][1]
                endLine := entry["range"]["end"][1] - 1
 
+               if tokenKind == "initially" then endLine+:=1
                # Ensure valid range for folding
                if startLine < endLine then {
                   put(results_table, table(
@@ -37,7 +36,7 @@ class FoldingRangeHandler(
             }  
          }
       }
-      Logger.info("Folding range results: " || ximage(results_table))
+      #Logger.info("Folding range results: " || ximage(results_table))
       return results_table
    end
 

@@ -5,9 +5,9 @@ UFLAGS=-s -u
 
 prog=ulsp
 
-SRC=launch-lsp.icn filespace.icn database.icn server.icn completion.icn signature.icn hover.icn \
+SRC=launch-lsp.icn file_handler.icn database.icn server.icn completion.icn signature.icn hover.icn \
 	definition.icn jsonrpc.icn logger.icn lsif.icn symbols.icn folding.icn
-OBJ=launch-lsp.u filespace.u database.u server.u completion.u signature.u hover.u definition.u \
+OBJ=launch-lsp.u file_handler.u database.u server.u completion.u signature.u hover.u definition.u \
 	jsonrpc.u logger.u lsif.u symbols.u folding.u
 
 export IPATH=$(UNI)/unidoc
@@ -17,15 +17,15 @@ export IPATH=$(UNI)/unidoc
 all: $(prog)
 $(prog): $(OBJ)
 	$(UC) -o $(prog) $(OBJ)
-	$(CP) -f $(prog)$(EXE) ../../bin
+	$(CP) $(prog)$(EXE) ../../bin
 
 jsonrpc-test: jsonrpc-test.u jsonrpc.u
 	$(UC) -o jsonrpc-test jsonrpc-test.u jsonrpc.u
 
-launch-lsp.u:launch-lsp.icn filespace.u database.u server.u completion.u signature.u hover.u \
+launch-lsp.u:launch-lsp.icn file_handler.u database.u server.u completion.u signature.u hover.u \
 				 definition.u symbols.u folding.u
 
-server.u:server.icn database.u completion.u filespace.u signature.u hover.u definition.u jsonrpc.u \
+server.u:server.icn database.u completion.u file_handler.u signature.u hover.u definition.u jsonrpc.u \
 		   logger.u symbols.u folding.u
 hover.u:hover.icn signature.u
 definition.u: definition.icn hover.u
