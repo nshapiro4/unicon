@@ -158,7 +158,7 @@ class Server(
 ########################################################
 
    method didOpen(request_params)
-      local fname, uri, f, initial_file_contents, filespace_object
+      local fname, uri, f, initial_file_contents, filehandler_object
       if \(uri := request_params["textDocument"]["uri"]) then {
          # uri: file://<PATH>
          uri ? {
@@ -171,13 +171,14 @@ class Server(
             close(f)
          }
       }
+      # Get rid of root / and change unicode encoded "%3A" back to ":" on Windows machines
       if &features == ("MS Windows NT") then {
          fname := fname[2] || ":" || fname[6:0]
       }
-      openFiles[\uri] := Filespace(fname, lsp_database)
-      filespace_object := openFiles[\uri]
-      filespace_object.setFile()
-      filespace_object.updateFilespace()
+      openFiles[\uri] := FileHandler(fname, lsp_database)
+      filehandler_object := openFiles[\uri]
+      filehandler_object.setFile()
+      filehandler_object.updateFileHandler()
 
    end
 
@@ -196,7 +197,7 @@ class Server(
 ########################################################
 
    method didChange(request_params)
-      local fname, uri, f, file_contents, filespace_object, initial_file_contents
+      local fname, uri, f, file_contents, filehandler_object, initial_file_contents
       if \(uri := request_params["textDocument"]["uri"]) then {
          # uri: file://<PATH>
          uri ? {
@@ -212,9 +213,9 @@ class Server(
 
       uri := request_params["textDocument"]["uri"]
       file_contents := request_params["contentChanges"][1]["text"]
-      filespace_object := openFiles[\uri]
-      filespace_object.updateUniDoc(fname, file_contents)
-      filespace_object.updateFilespace()
+      filehandler_object := openFiles[\uri]
+      filehandler_object.updateUniDoc(fname, file_contents)
+      filehandler_object.updateFileHandler()
    end
 
 ########################################################
@@ -222,9 +223,9 @@ class Server(
 ########################################################
 
    method completion(msg)
-      local filespace_object, result
-      filespace_object := openFiles[\msg.get_param_uri()]
-      completionHandler.setVariables(filespace_object, msg.get_params())
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      completionHandler.setVariables(filehandler_object, msg.get_params())
       result := completionHandler.run()
       msg.make_result_response(result)
       jrpc_handler.send_msg(msg)
@@ -235,9 +236,9 @@ class Server(
 ########################################################
 
    method signatureHelp(msg)
-      local filespace_object, result
-      filespace_object := openFiles[\msg.get_param_uri()]
-      signatureHandler.setVariables(filespace_object, msg.get_params())
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      signatureHandler.setVariables(filehandler_object, msg.get_params())
       result := signatureHandler.run()
       msg.make_result_response(result)
       jrpc_handler.send_msg(msg)
@@ -248,9 +249,9 @@ class Server(
 ########################################################
 
    method hoverHelp(msg)
-      local filespace_object, result
-      filespace_object := openFiles[\msg.get_param_uri()]
-      hoverHandler.setVariables(filespace_object, msg.get_params())
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      hoverHandler.setVariables(filehandler_object, msg.get_params())
       result := hoverHandler.run()
       msg.make_result_response(result)
       jrpc_handler.send_msg(msg)
@@ -261,10 +262,11 @@ class Server(
 ########################################################
 
    method definitionHelp(msg)
-      local filespace_object, result
-      filespace_object := openFiles[\msg.get_param_uri()]
-      definitionHandler.setVariables(filespace_object, msg.get_params())
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      definitionHandler.setVariables(filehandler_object, msg.get_params())
       result := definitionHandler.run()
+      \result["uri"] := replace(result["uri"], "c:/", "/c%3A/")
       msg.make_result_response(result)
       jrpc_handler.send_msg(msg)
    end
@@ -274,9 +276,9 @@ class Server(
 ########################################################
 
    method symbolHelp(msg)
-      local filespace_object, result
-      filespace_object := openFiles[\msg.get_param_uri()]
-      symbolHandler.setVariables(filespace_object, msg.get_params())
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      symbolHandler.setVariables(filehandler_object)
       if renewSymbols = 1 then {
          Logger.info("Getting new symbols for " || \msg.get_param_uri())
          result := symbolHandler.run()
@@ -302,9 +304,9 @@ class Server(
 ########################################################
 
    method foldingRangeHelp(msg)
-      local filespace_object, result
-      filespace_object := openFiles[\msg.get_param_uri()]
-      foldingRangeHandler.setVariables(filespace_object, msg.get_params())
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      foldingRangeHandler.setVariables(filehandler_object, msg.get_params())
       result := foldingRangeHandler.run()
       msg.make_result_response(result)
       jrpc_handler.send_msg(msg)
@@ -359,4 +361,3 @@ class Server(
          exit(1)
       }
 end
-

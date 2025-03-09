@@ -1,9 +1,9 @@
 # -------------------------------------------------------------------------
-# ---------------------- Filespace Class ----------------------------------
+# ---------------------- FileHandler Class --------------------------------
 # -------------------------------------------------------------------------
 #
 # Description:
-#    -Contains all items related to a particular opened filespace file.
+#    -Contains all items related to a particular opened filehandler file.
 #    -This includes:
 #       -The uri of the file
 #       -The contents of the file (synchronized contents coming from client - updating in textDocument/didChange)
@@ -29,7 +29,7 @@ import parser
 
 global identifiers
 
-class Filespace(
+class FileHandler(
    uri,
    lsp_database,
    temp_file,
@@ -54,7 +54,7 @@ class Filespace(
    internal_positions
    )
 
-   method updateFilespace()
+   method updateFileHandler()
       setLinks()
       setImports()
       setPackage()
@@ -297,7 +297,7 @@ class Filespace(
                   "type", paramType,
                   "default", paramDef))
             }
-            
+
             internal_classes[_class.getName()]["methods"][_method.getName()]["source"] := uri
          }
 
@@ -494,7 +494,7 @@ class Filespace(
 
    method setInternalPositions()
       local lineNum, _line, procedureName, startPos, endPos, className, methodName, variableName,
-            regexPattern, open_blocks, ending
+            regexPattern, open_blocks, ending, currentClass
 
       internal_positions := table()
       internal_positions["classes"] := table()
@@ -522,13 +522,14 @@ class Filespace(
                      "end", [lineNum-1, endPos]
                      )
                   )
-               
+
             }
          }
-   
+
          # Check for classes
          every className := key(internal_classes) do {
             if ReMatch("class\\s+" || className || "\\s*\\(", _line) then {
+               currentClass := className
                startPos := find(className, _line)
                endPos := startPos + *className - 1
                push(open_blocks, ["classes", className])
@@ -544,10 +545,8 @@ class Filespace(
                   )
                )
             }
-         }
-   
-         # Check for methods within classes
-         every className := key(internal_classes) do {
+
+            # Check for methods
             every methodName := key(internal_classes[className]["methods"]) do {
                if ReMatch(".*method\\s+" || methodName || "\\s*\\(", _line) then {
                   startPos := find(methodName, _line)
@@ -567,15 +566,40 @@ class Filespace(
                }
             }
          }
-   
+
+         # Check for "initially" sections
+         if ReMatch("^\\s*initially\\s*(\\(.*\\))?$", _line) then {
+            /internal_positions["initially"] := table()
+            startPos := find("initially", _line)
+            endPos := startPos + 9
+            push(open_blocks, ["initially", currentClass])
+            internal_positions["initially"][currentClass] := table(
+               "type", "method",
+               "range", table(
+                  "start", [lineNum-1, 0],
+                  "end", [lineNum-1, 0]
+               ),
+               "selectionRange", table(
+                  "start", [lineNum-1, startPos],
+                  "end", [lineNum-1, endPos]
+               )
+            )
+         }
+
+         #Check for keyword "end"
          if ReMatch("^\\s*end\\s*$", _line) then {
-            #write("MATCHED END ON LINE " || lineNum)
             if *open_blocks > 0 then {
                ending := pop(open_blocks)
-               #write("POPPIN!! " || ximage(ending))
-               internal_positions[ending[1]][ending[2]]["range"]["end"] := [lineNum, *_line]
+               if ending[1] == "initially" then {
+                  internal_positions[ending[1]][ending[2]]["range"]["end"] := [lineNum-2, *temp_idoc.getUniFileLine(uri, lineNum-1)]
+                  ending := pop(open_blocks)
+                  internal_positions[ending[1]][ending[2]]["range"]["end"] := [lineNum-1, *_line]
+               } else {
+                  internal_positions[ending[1]][ending[2]]["range"]["end"] := [lineNum-1, *_line]
+               }
             }
          }
+
          # Check for variables
          every variableName := key(variables) do {
             if ReMatch("^\\s*" || variableName || "\\s*\\:=", _line) then {
@@ -590,10 +614,8 @@ class Filespace(
                   )
             }
          }
-   
          lineNum +:= 1
       }
-      #write("Internal Positons: " || ximage(internal_positions))
    end
 
    method getInternalPositions()
@@ -881,21 +903,19 @@ class Context(uniAll, uri, line, lineNum, charNum, objectName, methodName, conte
    end
 
    initially(uniAll, uri, lineNum, charNum)
-      local uniFile, uniLine, uniFileIndex := 0
+      local f
       self.uniAll := uniAll
       self.uri := uri
       self.lineNum := lineNum
       self.charNum := charNum
       line := getDesiredLine(lineNum)
       contextCase := findContext()
-      uniFile := ((\uniAll.uniFilez)[uri]) | fail
       totalFileLines := 0
-      if \uniFile then {
-         while uniLine := (uniFile.Read(uniFileIndex +:= 1) || "\n") do
-         {
+      f := open(uri) | fail
+      reads(f, stat(uri).size) ?
+         every upto('\n') do
             totalFileLines +:= 1
-         }
-      }
+      f := close(f)
 end
 
 # Creates a working comments

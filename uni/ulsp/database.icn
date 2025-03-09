@@ -11,8 +11,6 @@
 package ulsp
 
 import UniDoc
-import json
-
 link paths
 
 global Logger
@@ -38,9 +36,9 @@ class LSPDB(
 
       if \unicon_dir then {
          build_bnf()
-         if \lsif_path then 
+         if \lsif_path then
             build_package_db(lsif_path)
-         else 
+         else
             build_package_db()
       }
       else {
@@ -103,7 +101,7 @@ class LSPDB(
    end
 
    method build_package_db(lsif_path)
-      local dirPath, db_paths := [], dir, outFile
+      local dirPath, db_paths := [], dir
 
       dirPath := unicon_dir
       if (\lsif_path) then {
@@ -111,7 +109,7 @@ class LSPDB(
          put(dir_list, lsif_path)
          Logger.debug2_kind("db:path", "Processing ", lsif_path)
          build_by_path(lsif_path)
-         fail
+         return
       }
       every dir := !ipaths_get() do
          # remove the current dir, also skip parser due to a unidoc bug
@@ -133,12 +131,12 @@ class LSPDB(
 
    method build_by_path(path)
       local idoc, x, pack, file_in_pack, file_without_ext, import_in_file, procedure_in_file, param_in_procedure,
-         paramName, paramType, paramDef, class_in_file, method_in_class, param_in_method, class_param, class_comment,
-         constructor_param, package_table, file_table, file_wo_ext_table, import_table, procedure_table, procedure_in_file_table,
-         param_table, classes_table, class_in_file_table, constructor_table, method_table, attributes_table, comments_table, 
-         superclass_table, src_table, cons_name_table, cons_comments_table, cons_params_table, method_name_table, method_name_comments_table,
-         method_name_params_table, lsif
-      
+         paramName, paramType, paramDef, class_in_file, method_in_class, param_in_method, class_param,
+         class_comment, constructor_param, package_table, file_table, file_wo_ext_table, import_table,
+         procedure_table, procedure_in_file_table, param_table, classes_table, class_in_file_table,
+         constructor_table, method_table, attributes_table, comments_table, superclass_table, src_table,
+         cons_name_table, cons_comments_table, cons_params_table, method_name_table, method_name_comments_table,
+         method_name_params_table
 
       idoc := UniAll()
 
@@ -157,7 +155,7 @@ class LSPDB(
          if /package_table then {
                package_db[pack.getName()] := package_table := table()
                package_table["files"] := file_table := table()
-               Logger.debug4_kind("db:path:package", "\tError: Uninitialized package table!")
+               Logger.debug4_kind("db:path:package", "Initialize package table for package ", pack.getName())
          }
 
          every file_in_pack := pack.getFiles().get() do {
@@ -166,11 +164,10 @@ class LSPDB(
             file_in_pack.getName() ? {
                file_without_ext := tab(upto("."))
             }
-            
-
             file_table[file_without_ext] := table()
-            
-            if /file_table[file_without_ext]["imports"] then file_table[file_without_ext]["imports"] := import_table := []
+
+            /file_table[file_without_ext]["imports"] := []
+            import_table := file_table[file_without_ext]["imports"]
             every import_in_file := file_in_pack.getImports().get() do {
                put(import_table, import_in_file.getName())
             }

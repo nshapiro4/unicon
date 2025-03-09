@@ -3,23 +3,28 @@ import ulsp
 import json
 link ximage
 
-global projectID, documentID, resultSetID, rangeID, range_list, document_list, referenceID
-
 #  Generates LSIF information by going through the packages in the database and create LSIF vertices and edges
 #  from each project, file, hover info, etc.
 class LSIFIndexer(
       db,                         # The provided database to index
-      nextID,                     # The ID for the vertices/edges
       outFile                     # The file to output to
       )
 
    #  The main method of the LSIFIndexer class; this method will take the assigned database (db) and
    #  use it to build an index file of all relevant information in each of the files and output it
    #  to a directed file in LSIF JSON format.
+   #  This function works by looping through each directory in the provided database, then looping
+   #  through each package and each file in the package. For each file it will loop through every
+   #  line and every character of every line, creating parameters to pass through to hoverHandler
+   #  and definitionHandler objects. Depending on the response from the hoverHandler, it will create
+   #  a range vertex. It then checks the definitionHandler. If the requested position is a definition
+   #  it creates a definition vertex. If it's defined elsewhere, it will save it in a table to check
+   #  later. At the end it will go through all the references and match them up with definitions.
    method build_index()
-      local i, j, k, idoc, path, x, pack, file_in_pack, uri, filespace_object, fake_params, result, hoverHandler,
+      local i, j, k, idoc, path, x, pack, file_in_pack, uri, filehandler_object, fake_params, result, hoverHandler,
             context, char_end, line_end, definitionHandler, result2, resultSet_table, resultSet, reference,
-            reference_table, c, b := 0, test := 0
+            reference_table, projectID, referenceID, resultSetID, rangeID, documentID, document_list, range_list,
+            c, b := 0
       hoverHandler := HoverHandler()
       definitionHandler := DefinitionHandler()
       resultSet_table := table()
@@ -43,7 +48,7 @@ class LSIFIndexer(
                if c == "/" | c == "\\" then b +:= 1
                if b == 2 then break
             }
-            createProjectVertex(path, path[&pos + 1:0])
+            projectID := createProjectVertex(path, path[&pos + 1:0])
          }
          createEventVertex("project", "begin", projectID)
          document_list := []
@@ -55,35 +60,36 @@ class LSIFIndexer(
                uri := path || "/" || file_in_pack.getName()
 
                Logger.info("[LSIF] Processing: " || uri)
-               createDocumentVertex(uri)
+               documentID := createDocumentVertex(uri)
+               put(document_list, documentID)
                createEventVertex("document", "begin", documentID)
-               filespace_object := Filespace(uri, db)
-               filespace_object.setFile()
-               filespace_object.updateFilespace()
-               j := 0
-               k := 0
-               context := filespace_object.getContext(1, 1)
+               filehandler_object := FileHandler(uri, db)
+               filehandler_object.setFile()
+               filehandler_object.updateFileHandler()
+               context := filehandler_object.getContext(1, 1)
                line_end := context.totalFileLines
-               while j < line_end do {
+               k := 0
+               every j := 0 to line_end-1 do {
                   fake_params["position"]["line"] := j
-                  context := filespace_object.getContext(j+1, 1)
+                  context := filehandler_object.getContext(j+1, 1)
                   char_end := *context.line
                   while k < char_end do {
                      fake_params["position"]["character"] := k
-                     hoverHandler.setVariables(filespace_object, fake_params)
-                     definitionHandler.setVariables(filespace_object, fake_params)
+                     hoverHandler.setVariables(filehandler_object, fake_params)
+                     definitionHandler.setVariables(filehandler_object, fake_params)
                      result := hoverHandler.run("lsif")
-                     if \result & tojson(result) ~== "{}" then {
-                        createRangeVertex(result["line"], result["begins"], result["ends"])
+                     if \result & *result ~= 0 then {
+                        rangeID := createRangeVertex(result["line"], result["begins"], result["ends"])
+                        put(range_list, rangeID)
                         result2 := definitionHandler.run()
-                        if \result2 & tojson(result2) ~== "{}" & result2["uri"] == uri then {
-                           if (j >= result2["range"]["start"]["line"] && j <= result2["range"]["end"]["line"] &&
-                               k >= result2["range"]["start"]["character"] && k <= result2["range"]["end"]["character"]) then {
-                              createResultSetVertex()
-                              createHoverResultVertex(result["item"], nextID-1)
-                              createNextEdge()
-                              createDefinitionResultVertex()
-                              createReferenceResultVertex(resultSetID, "definitions")
+                        if \result2 & *result2 ~= 0 & result2["uri"] == uri then {
+                           if (result2["range"]["start"]["line"] <= j <= result2["range"]["end"]["line"] &&
+                               result2["range"]["start"]["character"] <= k <= result2["range"]["end"]["character"]) then {
+                              resultSetID := createResultSetVertex()
+                              createHoverResultVertex(result["item"], resultSetID)
+                              createNextEdge(rangeID, resultSetID)
+                              createDefinitionResultVertex(resultSetID, rangeID, documentID)
+                              referenceID := createReferenceResultVertex(resultSetID, "definitions", rangeID, documentID)
                               result2["resultSetID"] := resultSetID
                               result2["docID"] := documentID
                               result2["referenceID"] := referenceID
@@ -94,7 +100,7 @@ class LSIFIndexer(
                               result2["docID"] := documentID
                               reference_table[rangeID] := result2
                            }
-                        } else if \result2 & tojson(result2) ~== "{}" & result2["uri"] ~== uri then {
+                        } else if \result2 & *result2 ~= 0 & result2["uri"] ~== uri then {
                               result2["rangeID"] := rangeID
                               result2["result"] := result
                               result2["docID"] := documentID
@@ -104,9 +110,8 @@ class LSIFIndexer(
                         }
                         k := result["ends"]
                      }
-                     k := k + 1
+                     k +:= 1
                   }
-                  j := j + 1
                   k := 0
                }
                if \range_list then {
@@ -144,6 +149,7 @@ class LSIFIndexer(
    #  Iterates nextID up one.
    #  <i>This is intended for internal use only!</i>
    method getNextID()
+      static nextID := 0
       return nextID +:= 1
    end
 
@@ -153,15 +159,15 @@ class LSIFIndexer(
    method createMetaDataVertex(path)
       local lsif_table
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "metaData"
-      lsif_table["version"] := "0.6.0"
-      lsif_table["projectRoot"] := "file:///" || replace(path, "C:", "c:")
-      lsif_table["positionEncoding"] := "utf-16"
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "vertex";
+         "label" : "metaData";
+         "version" : "0.6.0";
+         "projectRoot" : "file:///" || replace(path, "C:", "c:");
+         "positionEncoding" : "utf-16"
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
    end
 
    #  Creates a Project vertex with the given information and outputs it to the output file.
@@ -169,18 +175,17 @@ class LSIFIndexer(
    #          dir_name - The name of the directory for the project.
    #  <i>This is intended for internal use only!</i>
    method createProjectVertex(path, dir_name)
-      local lsif_table
-
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "project"
-      lsif_table["resource"] := "file:///" || path
-      lsif_table["kind"] := "unicon"
-      lsif_table["name"] := dir_name
-      projectID := nextID
+      local lsif_table, proID := getNextID()
+      lsif_table := [
+         "id" : proID;
+         "type" : "vertex";
+         "label" : "project";
+         "resource" : "file:///" || path;
+         "kind" : "unicon";
+         "name" : dir_name
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
+      return proID
    end
 
    #  Creates an Event vertex with the given information and outputs it to the output file.
@@ -191,15 +196,15 @@ class LSIFIndexer(
    method createEventVertex(scope, kind, scopeID)
       local lsif_table
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "$event"
-      lsif_table["kind"] := kind
-      lsif_table["scope"] := scope
-      lsif_table["data"] := scopeID
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "vertex";
+         "label" : "$event";
+         "kind" : kind;
+         "scope" : scope;
+         "data" : scopeID
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
    end
 
    #  Creates a Document vertex and the associated contains edge that links it to
@@ -207,32 +212,31 @@ class LSIFIndexer(
    #  Params: uri - The uri of the file of the document vertex.
    #  <i>This is intended for internal use only!</i>
    method createDocumentVertex(uri)
-      local lsif_table
+      local lsif_table, docID := getNextID()
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "document"
-      lsif_table["uri"] := "file:///" || uri
-      lsif_table["languageId"] := "unicon"
-      documentID := nextID
-      put(document_list, documentID)
+      lsif_table := [
+         "id" : docID;
+         "type" : "vertex";
+         "label" : "document";
+         "uri" : "file:///" || uri;
+         "languageId" : "unicon"
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
+      return docID
    end
 
    #  Creates a resultSet vertex that will link relevant information together.
    #  <i>This is intended for internal use only!</i>
    method createResultSetVertex()
-      local lsif_table
+      local lsif_table, resID := getNextID()
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "resultSet"
-      resultSetID := nextID
+      lsif_table := [
+         "id" : resID;
+         "type" : "vertex";
+         "label" : "resultSet"
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
+      return resID
    end
 
    #  Creates a range vertex with the relevant data.
@@ -241,18 +245,17 @@ class LSIFIndexer(
    #          endCharNum - The ending character position.
    #  <i>This is intended for internal use only!</i>
    method createRangeVertex(lineNum, startCharNum, endCharNum)
-      local lsif_table
+      local lsif_table, ranID := getNextID()
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "range"
-      lsif_table["start"] := table("line", lineNum, "character", startCharNum)
-      lsif_table["end"] := table("line", lineNum, "character", endCharNum)
-      rangeID := nextID
-      put(range_list, rangeID)
+      lsif_table := [
+         "id" : ranID;
+         "type" : "vertex";
+         "label" : "range";
+         "start" : table("line", lineNum, "character", startCharNum);
+         "end" : table("line", lineNum, "character", endCharNum)
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
+      return ranID
    end
 
    #  Creates a hoverResult vertex, along with a range vertex and a textdocument/hover edge.
@@ -261,85 +264,94 @@ class LSIFIndexer(
    #                  it will be the resultSetID.
    #  <i>This is intended for internal use only!</i>
    method createHoverResultVertex(value, outID)
-      local lsif_table
+      local lsif_table, hoverID := getNextID()
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "hoverResult"
-      lsif_table["result"] := table("contents", [table("language", "unicon", "value", value)])
+      lsif_table := [
+         "id" : hoverID;
+         "type" : "vertex";
+         "label" : "hoverResult";
+         "result" : table("contents", [table("language", "unicon", "value", value)])
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "edge"
-      lsif_table["label"] := "textDocument/hover"
-      lsif_table["inV"] := nextID-1
-      lsif_table["outV"] := outID
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "edge";
+         "label" : "textDocument/hover";
+         "inV" : hoverID;
+         "outV" : outID
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
    end
 
    #  Creates a next edge that links a given range vertex to a resultSet vertex.
+   #  Params: rangeID - The range of the token that is being hovered over.
+   #          resultSetID - The result set belonging to that range.
    #  <i>This is intended for internal use only!</i>
-   method createNextEdge()
+   method createNextEdge(rangeID, resultSetID)
       local lsif_table
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "edge"
-      lsif_table["label"] := "next"
-      lsif_table["outV"] := rangeID
-      lsif_table["inV"] := resultSetID
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "edge";
+         "label" : "next";
+         "outV" : rangeID;
+         "inV" : resultSetID
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
    end
 
    #  Creates a definitionResult vertex and a textDocument/definition edge that links a given range
    #  vertex to a resultSet vertex.
+   #  Params: resultSetID - The result set of the token that is being hovered over.
+   #          rangeID - The range of the token that is being hovered over.
+   #          documentID - The ID of the associated document.
    #  <i>This is intended for internal use only!</i>
-   method createDefinitionResultVertex()
-      local lsif_table
+   method createDefinitionResultVertex(resultSetID, rangeID, documentID)
+      local lsif_table, definitionID := getNextID()
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "definitionResult"
+      lsif_table := [
+         "id" : definitionID;
+         "type" : "vertex";
+         "label" : "definitionResult"
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "edge"
-      lsif_table["label"] := "textDocument/definition"
-      lsif_table["outV"] := resultSetID
-      lsif_table["inV"] := nextID-1
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "edge";
+         "label" : "textDocument/definition";
+         "outV" : resultSetID;
+         "inV": definitionID
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
-      createItemEdge(nextID-2, rangeID, documentID)
+      createItemEdge(definitionID, rangeID, documentID)
    end
 
    #  Creates a referenceResult vertex and a textDocument/references edge that links a given range
    #  vertex to a resultSet vertex.
+   #  Params: outID - The result set that this reference belongs to.
+   #          property - Either "definitions" or "references".
+   #          rangeID - The range of the token that is being hovered over.
+   #          documentID - The ID of the associated document.
    #  <i>This is intended for internal use only!</i>
-   method createReferenceResultVertex(outID, property)
-      local lsif_table
+   method createReferenceResultVertex(outID, property, rangeID, documentID)
+      local lsif_table, refID := getNextID()
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      referenceID := nextID
-      lsif_table["type"] := "vertex"
-      lsif_table["label"] := "referenceResult"
+      lsif_table := [
+         "id" : refID;
+         "type" : "vertex";
+         "label" : "referenceResult"
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "edge"
-      lsif_table["label"] := "textDocument/references"
-      lsif_table["outV"] := outID
-      lsif_table["inV"] := nextID-1
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "edge";
+         "label" : "textDocument/references";
+         "outV" : outID;
+         "inV" : refID
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
-      createItemEdge(nextID-2, rangeID, documentID, property)
+      createItemEdge(refID, rangeID, documentID, property)
+      return refID
    end
 
    #  Creates an item edge that links a given range vertex to a definitionResult.
@@ -353,19 +365,19 @@ class LSIFIndexer(
 
       ranges := []
       put(ranges, ItemRangeID)
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "edge"
-      lsif_table["label"] := "item"
-      lsif_table["outV"] := outID
-      lsif_table["inVs"] := ranges
-      lsif_table["shard"] := docID
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "edge";
+         "label" : "item";
+         "outV" : outID;
+         "inVs" : ranges;
+         "shard" : docID
+      ]
       if \property then lsif_table["property"] := property
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
    end
 
-   #  Creates an contains edge that links all of the ranges in a document to that document.
+   #  Creates a contains edge that links all of the ranges in a document to that document,
    #  or all the documents to a project.
    #  Params: outID - The ID that this edge is pointing out from, either the document or project ID.
    #          contains_table - The table with ID's of all ranges in a document or documents in a project.
@@ -373,20 +385,18 @@ class LSIFIndexer(
    method createContainsEdge(outID, contains_table)
       local lsif_table
 
-      lsif_table := table()
-      lsif_table["id"] := nextID
-      lsif_table["type"] := "edge"
-      lsif_table["label"] := "contains"
-      lsif_table["outV"] := outID
-      lsif_table["inVs"] := contains_table
+      lsif_table := [
+         "id" : getNextID();
+         "type" : "edge";
+         "label" : "contains";
+         "outV" : outID;
+         "inVs" : contains_table
+      ]
       write(outFile, tojson(lsif_table))
-      nextID := getNextID()
    end
 
-   #  Initially set this class' database to db and nextID to 1. This will also clear out the
-   #  output.lsif file and open it in append mode to be worked on by the Indexer.
+   #  Initially set this class' database and create/open the unicon.lsif file to be written to.
    initially(db)
       self.db := db
-      self.nextID := 1
-      self.outFile := open(db.unicon_dir || "uni/ulsp/unicon.lsif", "w") | stop("Unable to open file")
+      self.outFile := open(db.unicon_dir || "uni/ulsp/unicon.lsif", "w")
 end
