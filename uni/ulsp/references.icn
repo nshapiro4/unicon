@@ -1,0 +1,25 @@
+package ulsp
+
+link ximage
+
+#  Looks through all open files for any references to the requested definition.
+class ReferencesHandler(
+   filehandler,
+   params
+   )
+
+   #  Sets the class variables for the ReferencesHandler.
+   #  Params: new_openFiles - The openFiles object that contains all opened files in the workspace.
+   method setVariables(new_filehandler, new_params)
+      filehandler := new_filehandler
+      params := new_params
+   end
+
+   #  Searches through the currently opened files in the workspace and finds all references
+   #  to the requested definition.
+   method run()
+      local results_list := []
+
+      return results_list
+   end
+end

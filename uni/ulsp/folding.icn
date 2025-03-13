@@ -4,25 +4,25 @@ link regexp
 link ximage
 
 #  Processes all folding ranges in a document and constructs a result to return to the client.
-class FoldingRangeHandler(file_handler)
+class FoldingRangeHandler(filehandler)
 
    #  Sets the class variables for the FoldingRangeHandler.
-   #  Params: new_file_handler - The file_handler object created from the parameters of the
+   #  Params: new_filehandler - The filehandler object created from the parameters of the
    #                             request sent by the client.
-   method setVariables(new_file_handler)
-      file_handler := new_file_handler
+   method setVariables(new_filehandler)
+      filehandler := new_filehandler
    end
 
-   #  Searches through the provided file_handler for all internal positions of symbols and
+   #  Searches through the provided filehandler for all internal positions of symbols and
    #  constructs a result to send back to the client for all folding ranges.
    method run()
       local results_table, tokenKind, tokenName, entry, startLine, endLine, result
 
       results_table := []
 
-      every tokenKind := key(file_handler.internal_positions) do {
-         every tokenName := key(file_handler.internal_positions[tokenKind]) do {
-            entry := file_handler.internal_positions[tokenKind][tokenName]
+      every tokenKind := key(filehandler.internal_positions) do {
+         every tokenName := key(filehandler.internal_positions[tokenKind]) do {
+            entry := filehandler.internal_positions[tokenKind][tokenName]
 
             if member(entry, "range") then {
                startLine := entry["range"]["start"][1]
@@ -43,7 +43,7 @@ class FoldingRangeHandler(file_handler)
       return results_table
    end
 
-   #  Parse through the file_handler's temp_idoc parser to find all regions that are
+   #  Parse through the filehandler's temp_idoc parser to find all regions that are
    #  large blocks of comments, large blocks of imports or links, and open sections
    #  between curly brackets.
    #  <i>This is intended for internal use only!</i>
@@ -56,7 +56,7 @@ class FoldingRangeHandler(file_handler)
       importBlock := 0
       results_table := []
       open_blocks := []
-      while _line := file_handler.temp_idoc.getUniFileLine(file_handler.uri, lineNum) do {
+      while _line := filehandler.temp_idoc.getUniFileLine(filehandler.uri, lineNum) do {
          if ReMatch("^\\s*#.*$", _line) then {
             commentBlock +:= 1
             if commentBlock = 1 then commentLine := lineNum

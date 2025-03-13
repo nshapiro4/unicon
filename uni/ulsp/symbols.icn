@@ -3,16 +3,16 @@ package ulsp
 link ximage
 
 #  Processes all symbols in a document and constructs a result to return to the client.
-class SymbolHandler(file_handler)
+class SymbolHandler(filehandler)
 
    #  Sets the class variables for the SymbolHandler.
-   #  Params: new_file_handler - The file_handler object created from the parameters of the
+   #  Params: new_filehandler - The filehandler object created from the parameters of the
    #                             request sent by the client.
-   method setVariables(new_file_handler)
-      file_handler := new_file_handler
+   method setVariables(new_filehandler)
+      filehandler := new_filehandler
    end
 
-   #  Searches through the provided file_handler for all procedures, classes, methods, and
+   #  Searches through the provided filehandler for all procedures, classes, methods, and
    #  variables and constructs a result to send back to the client of all document symbols.
    method run()
       local procedure_name, procedure_table, class_name, class_table,
@@ -20,11 +20,11 @@ class SymbolHandler(file_handler)
             pos_table, sl, sc, el, ec, entity_table, proc_symbol, var_symbol,
             initially_table, variable_table, results_list
       results_list := []
-      pos_table := file_handler.getInternalPositions()
+      pos_table := filehandler.getInternalPositions()
       entity_table := table()
 
-      # Get procedures from file_handler
-      every procedure_name := key(file_handler.getInternalProcedures()) do {
+      # Get procedures from filehandler
+      every procedure_name := key(filehandler.getInternalProcedures()) do {
          if member(pos_table["procedures"], procedure_name) then {
             procedure_table := pos_table["procedures"][procedure_name]
 
@@ -46,8 +46,8 @@ class SymbolHandler(file_handler)
          }
       }
 
-      # Get classes and their methods from file_handler
-      every class_name := key(file_handler.getInternalClasses()) do {
+      # Get classes and their methods from filehandler
+      every class_name := key(filehandler.getInternalClasses()) do {
          if member(pos_table["classes"], class_name) then {
             class_table := pos_table["classes"][class_name]
 
@@ -66,8 +66,8 @@ class SymbolHandler(file_handler)
             )
          }
 
-         # Get methods inside classes from file_handler
-         every method_name := key(file_handler.getInternalClasses()[class_name]["methods"]) do {
+         # Get methods inside classes from filehandler
+         every method_name := key(filehandler.getInternalClasses()[class_name]["methods"]) do {
             if member(pos_table["methods"], method_name) then {
                method_table := pos_table["methods"][method_name]
 
@@ -89,7 +89,7 @@ class SymbolHandler(file_handler)
             }
          }
 
-         # Get initially sections inside classes from file_handler
+         # Get initially sections inside classes from filehandler
          if member(pos_table, "initially") && member(pos_table["initially"], class_name) then {
             initially_table := pos_table["initially"][class_name]
 
@@ -113,8 +113,8 @@ class SymbolHandler(file_handler)
          put(results_list, class_symbol)
       }
 
-      # Get variables from file_handler
-      every variable_name := key(file_handler.getVariables()) do {
+      # Get variables from filehandler
+      every variable_name := key(filehandler.getVariables()) do {
          if member(pos_table["variables"], variable_name) then {
             variable_table := pos_table["variables"][variable_name]
             sl := variable_table["selectionRange"]["start"][1]
