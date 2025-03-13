@@ -1,0 +1,45 @@
+package ulsp
+
+link ximage
+
+#     TODO:
+#           -Implement more textDocument request handling
+#           -Make LSIF faster
+#           -Functional tests in extension
+#
+#     COMPLETED:
+#           -Started framework for references
+#           -Reworked some extension comments/options
+#           -Changed timer waiting for startup of LSP server to detection of running state
+#           -Changed log level restart system
+#           -Submitted PR for symbols/folding
+#
+#     PLAN:
+#           -Finish references (What is best? Look through all open files? Look through every file
+#           in the lsp_database? Look through all files in that directory?) precomputing 
+#           -Look into issue where typing "procedure" crashes unidoc
+#	         -Look into issue with jsonrpc-test.icn not showing document symbols
+#           -Revamp LSIF.icn
+#
+
+#  Looks through all open files for any references to the requested definition.
+class ReferencesHandler(
+   filehandler,
+   params
+   )
+
+   #  Sets the class variables for the ReferencesHandler.
+   #  Params: new_openFiles - The openFiles object that contains all opened files in the workspace.
+   method setVariables(new_filehandler, new_params)
+      filehandler := new_filehandler
+      params := new_params
+   end
+
+   #  Searches through the currently opened files in the workspace and finds all references
+   #  to the requested definition.
+   method run()
+      local results_list := []
+
+      return results_list
+   end
+end

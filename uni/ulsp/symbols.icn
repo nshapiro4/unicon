@@ -3,42 +3,45 @@ package ulsp
 link ximage
 
 #  Processes all symbols in a document and constructs a result to return to the client.
-class SymbolHandler(file_handler)
+class SymbolHandler(filehandler)
 
    #  Sets the class variables for the SymbolHandler.
-   #  Params: new_file_handler - The file_handler object created from the parameters of the
+   #  Params: new_filehandler - The filehandler object created from the parameters of the
    #                             request sent by the client.
-   method setVariables(new_file_handler)
-      file_handler := new_file_handler
+   method setVariables(new_filehandler)
+      filehandler := new_filehandler
    end
 
-   #  Searches through the provided file_handler for all procedures, classes, methods, and
+   #  Searches through the provided filehandler for all procedures, classes, methods, and
    #  variables and constructs a result to send back to the client of all document symbols.
    method run()
-      local procedure_name, procedure_table, class_name, class_table,
-            method_name, method_table, variable_name, class_symbol, method_symbol,
-            pos_table, sl, sc, el, ec, entity_table, proc_symbol, var_symbol,
-            initially_table, variable_table, results_list
+      local procedure_name, procedure_table, procedure_range, procedure_selectionRange,
+            class_name, class_table, class_range, class_selectionRange, method_name,
+            method_table, method_range, method_selectionRange, variable_name, class_symbol,
+            method_symbol, pos_table, sl, sc, el, ec, entity_table, proc_symbol, var_symbol,
+            initially_table, initially_range, initially_selectionRange, variable_selectionRange, 
+            results_list
       results_list := []
-      pos_table := file_handler.getInternalPositions()
+      pos_table := filehandler.getInternalPositions()
       entity_table := table()
 
-      # Get procedures from file_handler
-      every procedure_name := key(file_handler.getInternalProcedures()) do {
-         if member(pos_table["procedures"], procedure_name) then {
-            procedure_table := pos_table["procedures"][procedure_name]
+      # Get procedures from filehandler
+      every procedure_name := key(filehandler.getInternalProcedures()) do {
+         if \(procedure_table := pos_table["procedures"][procedure_name]) then {
+            procedure_range := procedure_table["range"]
+            procedure_selectionRange := procedure_table["selectionRange"]
 
             proc_symbol := constructResult(
                procedure_name,
                12,
-               procedure_table["range"]["start"][1],
-               procedure_table["range"]["start"][2],
-               procedure_table["range"]["end"][1],
-               procedure_table["range"]["end"][2],
-               procedure_table["selectionRange"]["start"][1],
-               procedure_table["selectionRange"]["start"][2],
-               procedure_table["selectionRange"]["end"][1],
-               procedure_table["selectionRange"]["end"][2],
+               procedure_range["start"][1],
+               procedure_range["start"][2],
+               procedure_range["end"][1],
+               procedure_range["end"][2],
+               procedure_selectionRange["start"][1],
+               procedure_selectionRange["start"][2],
+               procedure_selectionRange["end"][1],
+               procedure_selectionRange["end"][2],
                []
             )
             entity_table[procedure_name] := proc_symbol
@@ -46,42 +49,44 @@ class SymbolHandler(file_handler)
          }
       }
 
-      # Get classes and their methods from file_handler
-      every class_name := key(file_handler.getInternalClasses()) do {
-         if member(pos_table["classes"], class_name) then {
-            class_table := pos_table["classes"][class_name]
+      # Get classes and their methods from filehandler
+      every class_name := key(filehandler.getInternalClasses()) do {
+         if \(class_table := pos_table["classes"][class_name]) then {
+            class_range := class_table["range"]
+            class_selectionRange := class_table["selectionRange"]
 
             class_symbol := constructResult(
                class_name,
                5,
-               class_table["range"]["start"][1],
-               class_table["range"]["start"][2],
-               class_table["range"]["end"][1],
-               class_table["range"]["end"][2],
-               class_table["selectionRange"]["start"][1],
-               class_table["selectionRange"]["start"][2],
-               class_table["selectionRange"]["end"][1],
-               class_table["selectionRange"]["end"][2],
+               class_range["start"][1],
+               class_range["start"][2],
+               class_range["end"][1],
+               class_range["end"][2],
+               class_selectionRange["start"][1],
+               class_selectionRange["start"][2],
+               class_selectionRange["end"][1],
+               class_selectionRange["end"][2],
                []
             )
          }
 
-         # Get methods inside classes from file_handler
-         every method_name := key(file_handler.getInternalClasses()[class_name]["methods"]) do {
-            if member(pos_table["methods"], method_name) then {
-               method_table := pos_table["methods"][method_name]
+         # Get methods inside classes from filehandler
+         every method_name := key(filehandler.getInternalClasses()[class_name]["methods"]) do {
+            if \(method_table := pos_table["methods"][method_name]) then {
+               method_range := method_table["range"]
+               method_selectionRange := method_table["selectionRange"]
 
                method_symbol := constructResult(
                   method_name,
                   6,
-                  method_table["range"]["start"][1],
-                  method_table["range"]["start"][2],
-                  method_table["range"]["end"][1],
-                  method_table["range"]["end"][2],
-                  method_table["selectionRange"]["start"][1],
-                  method_table["selectionRange"]["start"][2],
-                  method_table["selectionRange"]["end"][1],
-                  method_table["selectionRange"]["end"][2],
+                  method_range["start"][1],
+                  method_range["start"][2],
+                  method_range["end"][1],
+                  method_range["end"][2],
+                  method_selectionRange["start"][1],
+                  method_selectionRange["start"][2],
+                  method_selectionRange["end"][1],
+                  method_selectionRange["end"][2],
                   []
                )
                entity_table[method_name] := method_symbol
@@ -89,21 +94,22 @@ class SymbolHandler(file_handler)
             }
          }
 
-         # Get initially sections inside classes from file_handler
-         if member(pos_table, "initially") && member(pos_table["initially"], class_name) then {
-            initially_table := pos_table["initially"][class_name]
+         # Get initially sections inside classes from filehandler
+         if \(initially_table := pos_table["initially"][class_name]) then {
+            initially_range := initially_table["range"]
+            initially_selectionRange := initially_table["selectionRange"]
 
             method_symbol := constructResult(
                "initially",
                9,
-               initially_table["range"]["start"][1],
-               initially_table["range"]["start"][2],
-               initially_table["range"]["end"][1],
-               initially_table["range"]["end"][2],
-               initially_table["selectionRange"]["start"][1],
-               initially_table["selectionRange"]["start"][2],
-               initially_table["selectionRange"]["end"][1],
-               initially_table["selectionRange"]["end"][2],
+               initially_range["start"][1],
+               initially_range["start"][2],
+               initially_range["end"][1],
+               initially_range["end"][2],
+               initially_selectionRange["start"][1],
+               initially_selectionRange["start"][2],
+               initially_selectionRange["end"][1],
+               initially_selectionRange["end"][2],
                []
             )
             entity_table["initially" || class_name] := method_symbol
@@ -113,14 +119,13 @@ class SymbolHandler(file_handler)
          put(results_list, class_symbol)
       }
 
-      # Get variables from file_handler
-      every variable_name := key(file_handler.getVariables()) do {
-         if member(pos_table["variables"], variable_name) then {
-            variable_table := pos_table["variables"][variable_name]
-            sl := variable_table["selectionRange"]["start"][1]
-            sc := variable_table["selectionRange"]["start"][2]
-            el := variable_table["selectionRange"]["end"][1]
-            ec := variable_table["selectionRange"]["end"][2]
+      # Get variables from filehandler
+      every variable_name := key(filehandler.getVariables()) do {
+         if \(variable_selectionRange := pos_table["variables"][variable_name]["selectionRange"]) then {
+            sl := variable_selectionRange["start"][1]
+            sc := variable_selectionRange["start"][2]
+            el := variable_selectionRange["end"][1]
+            ec := variable_selectionRange["end"][2]
             var_symbol := constructResult(variable_name, 13, sl, sc, el, ec, sl, sc, el, ec, [])
             parent := find_parent_entity(sl, sc, el, ec, entity_table)
             if \parent then {
@@ -142,12 +147,12 @@ class SymbolHandler(file_handler)
    #          entity_table - A table containing all entities in the document, i.e. classes, methods, procedures.
    #  <i>This is intended for internal use only!</i>
    method find_parent_entity(v_rsl, v_rsc, v_rel, v_rec, entity_table)
-      local parent, p_rsl, p_rsc, p_rel, p_rec
-      every parent := !entity_table do {
-         p_rsl := parent["range"]["start"]["line"]
-         p_rsc := parent["range"]["start"]["character"]
-         p_rel := parent["range"]["end"]["line"]
-         p_rec := parent["range"]["end"]["character"]
+      local range, parent, p_rsl, p_rsc, p_rel, p_rec
+      every range := (parent := !entity_table)["range"] do {
+         p_rsl := range["start"]["line"]
+         p_rsc := range["start"]["character"]
+         p_rel := range["end"]["line"]
+         p_rec := range["end"]["character"]
 
          if (p_rsl < v_rsl | (p_rsl == v_rsl & p_rsc <= v_rsc)) &
             (p_rel > v_rel | (p_rel == v_rel & p_rec >= v_rec)) then {
@@ -171,31 +176,31 @@ class SymbolHandler(file_handler)
    #          chi - A list of results of children of this symbol, i.e. a method belonging to a class.
    #  <i>This is intended for internal use only!</i>
    method constructResult(nam, kin, rsl, rsc, rel, rec, ssl, ssc, sel, sec, chi)
-      local results_table := table(
-         "name", nam,
-         "kind", kin,
-         "range", table(
-            "start", table(
-               "line", rsl,
-               "character", rsc
-            ),
-            "end", table(
-               "line", rel,
-               "character", rec
-            )
-         ),
-         "selectionRange", table(
-            "start", table(
-               "line", ssl,
-               "character", ssc
-            ),
-            "end", table(
-               "line", sel,
-               "character", sec
-            )
-         ),
-         "children", chi
-      )
+      local results_table := [
+         "name" : nam;
+         "kind" : kin;
+         "range" : [
+            "start" : [
+               "line" : rsl;
+               "character" : rsc
+            ];
+            "end" : [
+               "line" : rel;
+               "character" : rec
+            ]
+         ];
+         "selectionRange" : [
+            "start" : [
+               "line" : ssl;
+               "character" : ssc
+            ];
+            "end" : [
+               "line" : sel;
+               "character" : sec
+            ]
+         ];
+         "children" : chi
+      ]
 
       return results_table
    end

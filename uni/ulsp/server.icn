@@ -25,6 +25,7 @@ class Server(
    definitionHandler,
    symbolHandler,
    foldingRangeHandler,
+   referencesHandler,
    lsp_database,                  # table containing database of packages (i.e. main, graphics3d, etc.) and their files.
    jrpc_handler,
    stoploop,
@@ -57,6 +58,7 @@ class Server(
          "textDocument/definition" : definitionHelp(msg)
          "textDocument/documentSymbol" : symbolHelp(msg)
          "textDocument/foldingRange" : foldingRangeHelp(msg)
+         "textDocument/references" : referencesHelp(msg)
          "shutdown" : shutdown(msg)
          default: {
             handle_unsupported(msg)
@@ -143,8 +145,8 @@ class Server(
             "hoverProvider": "__true__";
             "definitionProvider": "__true__";
             "documentSymbolProvider": "__true__";
-            "foldingRangeProvider": "__true__"
-
+            "foldingRangeProvider": "__true__";
+            "referencesProvider": "__true__"
          ];
          "processId": getpid()
       ]
@@ -298,7 +300,6 @@ class Server(
       jrpc_handler.send_msg(msg)
    end
 
-
 ########################################################
 #                textDocument/foldingRange             #
 ########################################################
@@ -306,8 +307,22 @@ class Server(
    method foldingRangeHelp(msg)
       local filehandler_object, result
       filehandler_object := openFiles[\msg.get_param_uri()]
-      foldingRangeHandler.setVariables(filehandler_object, msg.get_params())
+      foldingRangeHandler.setVariables(filehandler_object)
       result := foldingRangeHandler.run()
+      msg.make_result_response(result)
+      jrpc_handler.send_msg(msg)
+   end
+
+########################################################
+#                textDocument/references               #
+########################################################
+
+   method referencesHelp(msg)
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      referencesHandler.setVariables(filehandler_object, msg.get_params())
+      result := referencesHandler.run()
+      Logger.info("msg: " || ximage(msg))
       msg.make_result_response(result)
       jrpc_handler.send_msg(msg)
    end
@@ -328,6 +343,7 @@ class Server(
       definitionHandler := DefinitionHandler()
       symbolHandler := SymbolHandler()
       foldingRangeHandler := FoldingRangeHandler()
+      referencesHandler := ReferencesHandler()
    end
 
 

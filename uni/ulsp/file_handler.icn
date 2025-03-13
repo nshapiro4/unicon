@@ -496,11 +496,12 @@ class FileHandler(
       local lineNum, _line, procedureName, startPos, endPos, className, methodName, variableName,
             regexPattern, open_blocks, ending, currentClass
 
-      internal_positions := table()
-      internal_positions["classes"] := table()
-      internal_positions["procedures"] := table()
-      internal_positions["methods"] := table()
-      internal_positions["variables"] := table()
+      internal_positions := [
+         "classes" : [];
+         "procedures" : [];
+         "methods" : [];
+         "variables" : []
+      ]
       open_blocks := []
 
       lineNum := 1
@@ -511,18 +512,17 @@ class FileHandler(
                startPos := find(procedureName, _line)
                endPos := startPos + *procedureName - 1
                push(open_blocks, ["procedures", procedureName])
-               internal_positions["procedures"][procedureName] := table(
-                  "type", "procedure",
-                  "range", table(
-                     "start", [lineNum-1, 0],
-                     "end", [lineNum-1, 0]
-                  ),
-                  "selectionRange", table(
-                     "start", [lineNum-1, startPos],
-                     "end", [lineNum-1, endPos]
-                     )
-                  )
-
+               internal_positions["procedures"][procedureName] := [
+                  "type" : "procedure";
+                  "range" : [
+                     "start" : [lineNum-1, 0];
+                     "end" : [lineNum-1, 0]
+                  ];
+                  "selectionRange" : [
+                     "start" : [lineNum-1, startPos];
+                     "end" : [lineNum-1, endPos]
+                  ]
+               ]
             }
          }
 
@@ -533,17 +533,17 @@ class FileHandler(
                startPos := find(className, _line)
                endPos := startPos + *className - 1
                push(open_blocks, ["classes", className])
-               internal_positions["classes"][className] := table(
-                  "type", "class",
-                  "range", table(
-                     "start", [lineNum-1, 0],
-                     "end", [lineNum-1, 0]
-                  ),
-                  "selectionRange", table(
-                     "start", [lineNum-1, startPos],
-                     "end", [lineNum-1, endPos]
-                  )
-               )
+               internal_positions["classes"][className] := [
+                  "type" : "class";
+                  "range" : [
+                     "start" : [lineNum-1, 0];
+                     "end" : [lineNum-1, 0]
+                  ];
+                  "selectionRange" : [
+                     "start" : [lineNum-1, startPos];
+                     "end" : [lineNum-1, endPos]
+                  ]
+               ]
             }
 
             # Check for methods
@@ -552,17 +552,17 @@ class FileHandler(
                   startPos := find(methodName, _line)
                   endPos := startPos + *methodName - 1
                   push(open_blocks, ["methods", methodName])
-                  internal_positions["methods"][methodName] := table(
-                     "type", "method",
-                     "range", table(
-                        "start", [lineNum-1, 0],
-                        "end", [lineNum-1, 0]
-                     ),
-                     "selectionRange", table(
-                        "start", [lineNum-1, startPos],
-                        "end", [lineNum-1, endPos]
-                     )
-                  )
+                  internal_positions["methods"][methodName] := [
+                     "type" : "method";
+                     "range" : [
+                        "start" : [lineNum-1, 0];
+                        "end" : [lineNum-1, 0]
+                     ];
+                     "selectionRange" : [
+                        "start" : [lineNum-1, startPos];
+                        "end" : [lineNum-1, endPos]
+                     ]
+                  ]
                }
             }
          }
@@ -573,17 +573,17 @@ class FileHandler(
             startPos := find("initially", _line)
             endPos := startPos + 9
             push(open_blocks, ["initially", currentClass])
-            internal_positions["initially"][currentClass] := table(
-               "type", "method",
-               "range", table(
-                  "start", [lineNum-1, 0],
-                  "end", [lineNum-1, 0]
-               ),
-               "selectionRange", table(
-                  "start", [lineNum-1, startPos],
-                  "end", [lineNum-1, endPos]
-               )
-            )
+            internal_positions["initially"][currentClass] := [
+               "type" : "method";
+               "range" : [
+                  "start" : [lineNum-1, 0];
+                  "end" : [lineNum-1, 0]
+               ];
+               "selectionRange" : [
+                  "start" : [lineNum-1, startPos];
+                  "end" : [lineNum-1, endPos]
+               ]
+            ]
          }
 
          #Check for keyword "end"
@@ -740,7 +740,7 @@ class Context(uniAll, uri, line, lineNum, charNum, objectName, methodName, conte
       line := uniAll.getUniFileLine(uri, lineNum)
    end
 
-   # Retrive object name #
+   # Retrieve object name #
    method getObjectName()
       local temp, c, name
       line ? {
