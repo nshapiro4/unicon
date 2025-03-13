@@ -1,0 +1,120 @@
+package ulsp
+
+link regexp
+link ximage
+
+#  Processes all folding ranges in a document and constructs a result to return to the client.
+class FoldingRangeHandler(file_handler)
+
+   #  Sets the class variables for the FoldingRangeHandler.
+   #  Params: new_file_handler - The file_handler object created from the parameters of the
+   #                             request sent by the client.
+   method setVariables(new_file_handler)
+      file_handler := new_file_handler
+   end
+
+   #  Searches through the provided file_handler for all internal positions of symbols and
+   #  constructs a result to send back to the client for all folding ranges.
+   method run()
+      local results_table, tokenKind, tokenName, entry, startLine, endLine, result
+
+      results_table := []
+
+      every tokenKind := key(file_handler.internal_positions) do {
+         every tokenName := key(file_handler.internal_positions[tokenKind]) do {
+            entry := file_handler.internal_positions[tokenKind][tokenName]
+
+            if member(entry, "range") then {
+               startLine := entry["range"]["start"][1]
+               endLine := entry["range"]["end"][1] - 1
+
+               if tokenKind == "initially" then endLine+:=1
+               if startLine < endLine then {
+                  put(results_table, table(
+                     "startLine", startLine,
+                     "endLine", endLine
+                  ))
+               }
+            }
+         }
+      }
+      every result := !findFoldingRanges() do put(results_table, result)
+
+      return results_table
+   end
+
+   #  Parse through the file_handler's temp_idoc parser to find all regions that are
+   #  large blocks of comments, large blocks of imports or links, and open sections
+   #  between curly brackets.
+   #  <i>This is intended for internal use only!</i>
+   method findFoldingRanges()
+      local lineNum, _line, commentBlock, commentLine, results_table, open_blocks, startLine, character, ch,
+            single_quote, double_quote, importBlock, importLine
+
+      lineNum := 1
+      commentBlock := 0
+      importBlock := 0
+      results_table := []
+      open_blocks := []
+      while _line := file_handler.temp_idoc.getUniFileLine(file_handler.uri, lineNum) do {
+         if ReMatch("^\\s*#.*$", _line) then {
+            commentBlock +:= 1
+            if commentBlock = 1 then commentLine := lineNum
+         } else {
+            if commentBlock > 1 then {
+               put(results_table, table(
+                  "startLine", commentLine-1,
+                  "endLine", lineNum-2
+               ))
+            }
+            commentBlock := 0
+            if ReMatch("^(link|import)\\s+.*", _line) then {
+               importBlock +:= 1
+               if importBlock = 1 then importLine := lineNum
+            } else {
+               if importBlock > 1 then {
+                  put(results_table, table(
+                     "startLine", importLine-1,
+                     "endLine", lineNum-2
+                  ))
+               }
+               importBlock := 0
+            }
+            if *open_blocks > 0 & character := ReMatch(".*\\}", _line) then {
+               _line ? {
+                  single_quote := 0
+                  double_quote := 0
+                  while (&pos < character) do {
+                     ch := move(1) | break
+                     if (ch == "\'" & (_line[&pos-2] ~== "\\")) then single_quote +:= 1
+                     if (ch == "\"" & (_line[&pos-2] ~== "\\")) then double_quote +:= 1
+                  }
+                  if (single_quote % 2) = 0 && (double_quote % 2) = 0 then {
+                     startLine := pop(open_blocks)
+                     put(results_table, table(
+                        "startLine", startLine-1,
+                        "endLine", lineNum-2
+                     ))
+                  }
+               }
+            }
+            if character := ReMatch(".*\\{", _line) then {
+               _line ? {
+                  single_quote := 0
+                  double_quote := 0
+                  while (&pos < character) do {
+                     ch := move(1) | break
+                     if (ch == "\'" & (_line[&pos-2] ~== "\\")) then single_quote +:= 1
+                     if (ch == "\"" & (_line[&pos-2] ~== "\\")) then double_quote +:= 1
+                  }
+                  if (single_quote % 2) = 0 && (double_quote % 2) = 0 then {
+                     push(open_blocks, lineNum)
+                  }
+               }
+            }
+         }
+         lineNum +:= 1
+      }
+      return results_table
+   end
+end
