@@ -1,0 +1,173 @@
+package ulsp
+
+link regexp
+link ximage
+
+#  TODO:
+#     References
+#     Look into unidoc bug that crashes when typing procedure in new file
+#     Have formatting ignore structured comment
+#     Fix formatting with multi-line strings, multi-line table creation/function calls
+#
+#  Completed: 
+#     Fixed crash when opening ui.icn due to class declaration using parent
+#     Fixed crash with "class" not in beginning of line, same with "procedure" (not a crash but wouldn't get recognized)
+#     
+#
+#  For next meeting:
+#     Any other formatting ideas?
+#     Experiment with ideas for references handling
+#     Finish up formatting
+#     Look into other responses
+#
+#     Operators to care about: := +:= -:= = == === + - / * ^ % ** ++ -- ~= < <= > >= ~== << >> >>= <<= ~=== :=: <- <->
+#     Things to ignore: whitespace ignore if "### Ivib-v2 layout ##" is present, if in string _ multi line, table := [ or (
+
+#  Processes all formatting changes to be made to a document and constructs a result to return to the client.
+class FormattingHandler(filehandler, params)
+
+   #  Sets the class variables for the FormattingHandler.
+   #  Params: new_filehandler - The filehandler object created from the parameters of the
+   #                            request sent by the client.
+   #  Params: new_params - The parameters of the request.
+   method setVariables(new_filehandler, new_params)
+      filehandler := new_filehandler
+      params := new_params
+   end
+
+   #  Searches through the provided filehandler for any incorrect formatting and
+   #  constructs a result to send back to the client for any changes to be made.
+   method run()
+      local results_list, result, lineNum, _line, foldingRangeHandler,
+            foldingResult, tabSize, tabLevel, entry, structuredComment
+
+      results_list := []
+      foldingRangeHandler := FoldingRangeHandler()
+      foldingRangeHandler.setVariables(filehandler)
+      foldingResult := foldingRangeHandler.run()
+      tabSize := params["options"]["tabSize"]
+      structuredComment := 0
+      lineNum := 1
+
+      while _line := filehandler.temp_idoc.getUniFileLine(filehandler.uri, lineNum) do {
+         # Ignore structured Ivib comments 
+         if match("### Ivib-v2 layout ##", _line) then structuredComment := 1
+         if structuredComment = 1 then {
+            if match("#", _line) then {
+               lineNum +:= 1
+               next
+            } else structuredComment := 0
+         }
+         if structuredComment = 0 & \(result := clearWhitespace(_line, lineNum)) then put(results_list, result)
+
+         # Ignore if "link" or "import" is at the beginning of the line
+         if match(("link" | "import"), _line) then {
+            lineNum +:= 1
+            next
+         }
+         
+         # If the line without whitespace isn't empty then fix indentation as needed
+         if *trim(_line) ~= 0 then {
+            tabLevel := 0
+            every entry := !foldingResult do {
+               if entry["startLine"]+1 < lineNum < entry["endLine"]+2 then tabLevel +:= 1
+            }
+            if \(result := fixIndentation(_line, lineNum, tabSize*tabLevel)) then put(results_list, result)
+         }
+         lineNum +:= 1
+      }
+      write("\nResults_list: " || ximage(results_list))
+      return results_list
+   end
+
+   #  Returns a result from clearing a specific line of all whitespace (if there is any).
+   #  Params: _line - The actual content of the line.
+   #          lineNum - The line number to check.
+   #  <i>This is intended for internal use only!</i>
+   method clearWhitespace(_line, lineNum)
+      local position, ch, spaces := 0
+      _line ? {
+         while ch := move(1) do {
+            if ch == " " then {
+               if spaces == 0 then position := &pos-2
+               spaces := 1
+            } else spaces := 0
+         }
+      }
+      if spaces = 1 then return createResult(lineNum-1, position, lineNum-1, *_line, "")
+   end
+
+   #  Checks the indentation and returns a result fixing any errors based on the 
+   #  level of the line and the tab size set in VsCode
+   #  Params: _line - The actual content of the line.
+   #          lineNum - The line number to check.
+   #          tabAmount - The level of the line multiplied by the tab size.
+   #  <i>This is intended for internal use only!</i>
+   method fixIndentation(_line, lineNum, tabAmount)
+      local correctSpaces, actualSpaces, ch
+
+      correctSpaces := repl(" ", tabAmount)
+      actualSpaces := 0
+      _line ? {
+         while ch := move(1) do {
+            if ch == "#" then return
+            if ch ~== " " then break
+            actualSpaces +:= 1
+         }
+         if actualSpaces ~= tabAmount then return createResult(lineNum-1, 0, lineNum-1, &pos-2, correctSpaces)
+      }
+   end
+
+   #  Checks for any operators and inserts spaces on either side as needed.
+   #  Params: _line - The actual content of the line.
+   #          lineNum - The line number to check.
+   #  <i>This is intended for internal use only!</i>
+   method insertSpaces(_line, lineNum)
+      local ch, ops, op position, single_quote, double_quote, res
+
+      res := []
+      ops := [":=", "+:=", "-:=", "=", "==", "===", "+", "-", "/", "*", "^", "%", "**", "++", "--", 
+              "~=", "<", "<=", ">", ">=", "~==", "<<", ">>", ">>=", "<<=", "~===", ":=:", "<-", "<->"]
+      every op := !ops do {
+         if position := ReMatch("^\\s*"||op||"\\s*$", _line) then break
+      }
+      if /position then return
+      _line ? {
+         single_quote := 0
+         double_quote := 0
+         while (&pos < position) do {
+            ch := move(1) | break
+            if (ch == "\'" & (line[&pos-2] ~== "\\")) then single_quote +:= 1
+            if (ch == "\"" & (line[&pos-2] ~== "\\")) then double_quote +:= 1
+         }
+         if (single_quote % 2) ~== 0 | (double_quote % 2) ~== 0 then return
+         if move(-1) ~== " " then res[1] := createResult(lineNum-1, &pos, lineNum-1, &pos, " ")
+         if move(1 + *op) ~== " " then res[2] := createResult(lineNum-1, &pos, lineNum - 1, &pos, " ")
+      }
+      return res
+   end
+
+   #  Constructs a result table with all of the selected parameters.
+   #  Params: sLine - The starting line for the range of the section to be editted.
+   #          sChar - The starting character for the range of the section to be editted.
+   #          eLine - The ending line for the range of the section to be editted.
+   #          eChar - The ending character for the range of the section to be editted.
+   #          newText - The new text to replace the text in the selected range.
+   #  <i>This is intended for internal use only!</i>
+   method createResult(sLine, sChar, eLine, eChar, newText)
+      local result := [
+            "range" : [
+               "start" : [
+                  "line" : sLine;
+                  "character" : sChar
+               ]
+               "end" : [
+                  "line" : eLine;
+                  "character" : eChar
+               ]
+            ];
+            "newText" : newText
+      ]
+      return result
+   end
+end

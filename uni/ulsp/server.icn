@@ -25,6 +25,7 @@ class Server(
    definitionHandler,
    symbolHandler,
    foldingRangeHandler,
+   formattingHandler,
    lsp_database,                  # table containing database of packages (i.e. main, graphics3d, etc.) and their files.
    jrpc_handler,
    stoploop,
@@ -57,6 +58,7 @@ class Server(
          "textDocument/definition" : definitionHelp(msg)
          "textDocument/documentSymbol" : symbolHelp(msg)
          "textDocument/foldingRange" : foldingRangeHelp(msg)
+         "textDocument/formatting" : formattingHelp(msg)
          "shutdown" : shutdown(msg)
          default: {
             handle_unsupported(msg)
@@ -144,7 +146,8 @@ class Server(
             "hoverProvider": "__true__";
             "definitionProvider": "__true__";
             "documentSymbolProvider": "__true__";
-            "foldingRangeProvider": "__true__"
+            "foldingRangeProvider": "__true__";
+            "documentFormattingProvider": "__true__"
 
          ];
          "processId": getpid()
@@ -278,7 +281,7 @@ class Server(
 
    method symbolHelp(msg)
       local filehandler_object, uri, result
-      
+
       if \(uri := msg.get_param_uri()) then {
          filehandler_object := openFiles[uri]
          symbolHandler.setVariables(filehandler_object)
@@ -316,6 +319,19 @@ class Server(
       jrpc_handler.send_msg(msg)
    end
 
+########################################################
+#                textDocument/formatting               #
+########################################################
+
+   method formattingHelp(msg)
+      local filehandler_object, result
+      filehandler_object := openFiles[\msg.get_param_uri()]
+      formattingHandler.setVariables(filehandler_object, msg.get_params())
+      result := formattingHandler.run()
+      msg.make_result_response(result)
+      jrpc_handler.send_msg(msg)
+   end
+
    method shutdown(msg)
       local result
       msg.make_result_response(result)
@@ -332,6 +348,7 @@ class Server(
       definitionHandler := DefinitionHandler()
       symbolHandler := SymbolHandler()
       foldingRangeHandler := FoldingRangeHandler()
+      formattingHandler := FormattingHandler()
    end
 
 

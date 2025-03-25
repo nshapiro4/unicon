@@ -1,0 +1,149 @@
+link options
+link regexp
+
+                     procedure main()
+         write("hello world!")
+   end
+
+                     class test(
+            foldingRangeHandler,
+               TestThing,
+         )
+
+                     method testMethod()
+      write("test")
+            end
+
+               initially
+                local test1
+         end
+
+         procedure math()
+                     local test2,      test1
+               test1:=1
+            test2:=1
+            test2+:=2
+            test2-:=1
+            test1:=:test2
+write(test1+test2)
+   write(test1-test2)
+write     (test1*test2)
+            write(test1/test2)       
+write(test1%test2)
+write(test1^test2)
+write(test1=test2)
+write(test1==test2)
+write(test1===test2)
+write(test1~=test2)
+write(test1~==test2)
+write(test1~===test2)
+write(test1>test2)
+write(test1>=test2)
+write(test1>>test2)
+write(test1>>=test2)
+write(test1<test2)
+write(test1<=test2)
+write(test1<<test2)
+write(test1<<=test2)
+write(test1**test2)
+write(test1++test2)
+write(test1--test2)
+write(test1<-test2)
+write(test1<->test2)
+
+      end
+
+
+### Ivib-v2 layout ##
+#class|Canvas|17|Name Table|table|integer|0|11|string|editable_text_lis
+#t|integer|2|string|icon|integer|1|string|menu|integer|2|string|menu_ba
+#r|integer|1|string|menu_separator|integer|1|string|panel|integer|1|str
+#ing|tab_item|integer|4|string|tab_set|integer|3|string|text_list|integ
+#er|2|string|text_menu_item|integer|18|string|tree|integer|1|SuperClass
+# Name|string|Dialog|Import Name|string|gui|Button Groups|class|ButtonG
+#roupSet|2|Parent Canvas|1|Boxes|list|0|Checkbox Groups|class|CheckBoxG
+#roupSet|2|Parent Canvas|1|Boxes|list|0|Gen Indent|integer|3|Gen Main|i
+#nteger|1|Gen Component Setup|integer|1|Gen Init Dialog|integer|1|Gen I
+#nitially|integer|1|Dialog Struct|class|CDialog|4|Min Width|null|Min He
+#ight|null|Ticker Rate|null|Attribs|list|4|string|bg=pale gray|string|l
+#abel=Unicon IDE|string|font=mono,16|string|resize=on|Name|string|UIDE|
+#Width|integer|750|Height|integer|560|Items|list|4|class|CanvasTabSet|2
+#7|Parent Canvas|1|Name|string|DevTabSet|Class Name|string|TabSet|Impor
+#t Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Defaul
+#t|null|H Default|null|X Spec|string|0|Y Spec|string|100%-110|W Spec|st
+#ring|100%|H Spec|string|110|X Align|string|l|Y Align|string|t|Is shade
+#d|null|Is Button Subclass|null|Draw Border|null|Attribs|list|0|Tooltip
+#|null|Accel|null|Event Handlers|list|0|Class Variable|integer|1|Parent
+# Component|1|Children|list|1|class|CanvasTabItem|28|Parent Canvas|1|Na
+#me|string|tab_item_1|Class Name|string|TabItem|Import Name|string|gui|
+#X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Default|null|H Default|n
+#ull|X Spec|integer|0|Y Spec|integer|0|W Spec|string|100%|H Spec|string
+#|100%|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subcl
+#ass|null|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event
+# Handlers|null|Class Variable|integer|1|Parent Component|10|Label|stri
+#ng|Messages: (Single File Mode)|Parent TabSet|10|Children|list|1|class
+#|CanvasEditableTextList|26|Parent Canvas|1|Name|string|MsgBox|Class Na
+#me|string|EditableTextList|Import Name|string|gui|X Fix|null|Y Fix|nul
+#l|W Fix|null|H Fix|null|W Default|null|H Default|null|X Spec|string|2|
+#Y Spec|string|2|W Spec|string|100%-4|H Spec|string|100%-4|X Align|stri
+#ng|l|Y Align|string|t|Is shaded|null|Is Button Subclass|null|Draw Bord
+#er|integer|1|Attribs|list|1|string|bg=white|Tooltip|null|Accel|null|Ev
+#ent Handlers|list|0|Class Variable|integer|1|Parent Component|14|Conte
+#nts|list|1|string||Which One|14|class|CanvasTabSet|27|Parent Canvas|1|
+#Name|string|FileTabSet|Class Name|string|BufferTabSet|Import Name|stri
+#ng|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Default|null|H De
+#fault|null|X Spec|string|150|Y Spec|string|9%|W Spec|string|100%-150|H
+# Spec|string|100%-160|X Align|string|l|Y Align|string|t|Is shaded|null
+#|Is Button Subclass|null|Draw Border|null|Attribs|list|0|Tooltip|null|
+#Accel|null|Event Handlers|list|0|Class Variable|integer|1|Parent Compo
+#nent|1|Children|list|1|class|CanvasTabItem|28|Parent Canvas|1|Name|str
+#ing|tab_item_2|Class Name|string|TabItem|Import Name|string|gui|X Fix|
+#null|Y Fix|null|W Fix|null|H Fix|null|W Default|null|H Default|null|X 
+#Spec|integer|0|Y Spec|integer|0|W Spec|string|100%|H Spec|string|100%|
+#X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subclass|nu
+#ll|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handl
+#ers|null|Class Variable|integer|1|Parent Component|21|Label|string|scr
+#atch|Parent TabSet|21|Children|list|1|class|CanvasEditableTextList|26|
+#Parent Canvas|1|Name|string|EditBox|Class Name|string|BuffEditableText
+#List|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|nul
+#l|W Default|null|H Default|null|X Spec|string|2|Y Spec|string|2|W Spec
+#|string|100%-4|H Spec|string|100%-4|X Align|string|l|Y Align|string|t|
+#Is shaded|null|Is Button Subclass|null|Draw Border|integer|1|Attribs|l
+#ist|1|string|bg=white|Tooltip|null|Accel|null|Event Handlers|list|0|Cl
+#ass Variable|integer|1|Parent Component|25|Contents|list|1|string||Whi
+#ch One|25|class|CanvasTabSet|27|Parent Canvas|1|Name|string|ClassTabSe
+#t|Class Name|string|BufferTabSet|Import Name|string|gui|X Fix|null|Y F
+#ix|null|W Fix|null|H Fix|null|W Default|null|H Default|null|X Spec|str
+#ing|0|Y Spec|string|9%|W Spec|string|150|H Spec|string|100%-160|X Alig
+#n|string|l|Y Align|string|t|Is shaded|null|Is Button Subclass|null|Dra
+#w Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|li
+#st|0|Class Variable|integer|1|Parent Component|1|Children|list|1|class
+#|CanvasTabItem|28|Parent Canvas|1|Name|string|tab_item_3|Class Name|st
+#ring|TabItem|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H
+# Fix|null|W Default|null|H Default|null|X Spec|integer|0|Y Spec|intege
+#r|0|W Spec|string|100%|H Spec|string|100%|X Align|string|l|Y Align|str
+#ing|t|Is shaded|null|Is Button Subclass|null|Draw Border|null|Attribs|
+#list|0|Tooltip|null|Accel|null|Event Handlers|null|Class Variable|inte
+#ger|1|Parent Component|32|Label|string|Class Browser|Parent TabSet|32|
+#Children|list|1|class|CanvasTree|29|Parent Canvas|1|Name|string|FileBr
+#owser|Class Name|string|ClassBrowser|Import Name|string|gui|X Fix|null
+#|Y Fix|null|W Fix|null|H Fix|null|W Default|null|H Default|null|X Spec
+#|string|2|Y Spec|string|2|W Spec|string|100%-4|H Spec|string|100%-4|X 
+#Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subclass|null
+#|Draw Border|integer|1|Attribs|list|1|string|bg=white|Tooltip|null|Acc
+#el|null|Event Handlers|list|0|Class Variable|integer|1|Parent Componen
+#t|36|Select One|integer|1|Select Many|null|Show Root Handles|integer|1
+#|Show Root|integer|1|Which One|36|class|CanvasPanel|26|Parent Canvas|1
+#|Name|string|pnlToolbar|Class Name|string|Panel|Import Name|string|gui
+#|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Default|null|H Default|
+#null|X Spec|string|0|Y Spec|string|4.5%|W Spec|string|100%|H Spec|stri
+#ng|4.5%|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Sub
+#class|null|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Eve
+#nt Handlers|list|0|Class Variable|integer|1|Parent Component|1|Childre
+#n|list|0|Initial Focus|null|Event Handlers|list|1|list|2|string|CLOSE_
+#BUTTON_EVENT|string|on_close|       
+
+      
+         procedure check()       
+               local test
+end
